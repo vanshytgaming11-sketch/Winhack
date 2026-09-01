@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 3.5 — Namespaces — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="namespaces">
+  <h1>Module 3.5 — Namespaces</h1>
+  <p>
+    A namespace is a declarative region that groups related identifiers (functions, classes, variables) under a named scope, preventing naming conflicts when combining code from multiple sources — such as your own code, third-party libraries, and the C++ standard library.
+  </p>
+
+  <h2>1. The Problem Namespaces Solve</h2>
+  <pre><code class="language-cpp">// Without namespaces, this causes a REDEFINITION ERROR:
+void display() { cout &lt;&lt; "Version A"; }
+void display() { cout &lt;&lt; "Version B"; }  // COMPILE ERROR — display already defined
+
+// With namespaces, both can coexist safely:
+namespace ModuleA {
+    void display() { cout &lt;&lt; "Version A"; }
+}
+
+namespace ModuleB {
+    void display() { cout &lt;&lt; "Version B"; }
+}
+
+int main() {
+    ModuleA::display(); // Version A
+    ModuleB::display();   // Version B
+    return 0;
+}</code></pre>
+
+  <h2>2. Creating a Namespace</h2>
+  <pre><code class="language-cpp">namespace MathUtils {
+    const double PI = 3.14159;
+
+    int square(int x) {
+        return x * x;
+    }
+
+    class Calculator {
+        public:
+            int add(int a, int b) { return a + b; }
+    };
+}
+
+int main() {
+    cout &lt;&lt; MathUtils::PI &lt;&lt; endl;                  // 3.14159
+    cout &lt;&lt; MathUtils::square(5) &lt;&lt; endl;               // 25
+
+    MathUtils::Calculator calc;
+    cout &lt;&lt; calc.add(3, 4) &lt;&lt; endl;                       // 7
+    return 0;
+}</code></pre>
+
+  <h2>3. The Scope Resolution Operator <code>::</code></h2>
+  <p>
+    The <code>::</code> operator is used to specify exactly which namespace (or class) an identifier belongs to, disambiguating between multiple entities with the same name.
+  </p>
+  <pre><code class="language-cpp">namespace First {
+    int value = 10;
+}
+
+namespace Second {
+    int value = 20;
+}
+
+int main() {
+    cout &lt;&lt; First::value;    // 10
+    cout &lt;&lt; Second::value;     // 20
+    return 0;
+}</code></pre>
+
+  <h2>4. The <code>std</code> Namespace</h2>
+  <p>
+    Everything in the C++ Standard Library — <code>cout</code>, <code>cin</code>, <code>string</code>, <code>vector</code>, <code>sort</code>, etc. — lives inside the <code>std</code> namespace. This is exactly why <code>std::cout</code> and <code>std::string</code> are the fully-qualified names, and why <code>using namespace std;</code> lets you drop the prefix.
+  </p>
+  <pre><code class="language-cpp">// Without "using namespace std;" — fully qualified
+std::cout &lt;&lt; "Hello" &lt;&lt; std::endl;
+std::string name = "Vinit";
+std::vector&lt;int&gt; v;
+
+// With "using namespace std;" — shorter, but brings the ENTIRE namespace into scope
+using namespace std;
+cout &lt;&lt; "Hello" &lt;&lt; endl;
+string name = "Vinit";
+vector&lt;int&gt; v;</code></pre>
+
+  <h2>5. <code>using namespace std;</code> — Convenience vs Risk</h2>
+  <p>
+    While convenient (and used throughout this course for brevity), <code>using namespace std;</code> at global scope in large projects or header files is generally discouraged in professional code, because it imports <em>every</em> name from <code>std</code> into the current scope — increasing the risk of naming collisions as a codebase grows.
+  </p>
+  <pre><code class="language-cpp">using namespace std;
+
+int count = 5;    // Fine on its own, BUT std also has things like std::count (an algorithm) —
+                      // in more complex code, such overlaps can create genuinely confusing
+                      // ambiguous-call errors that are hard to diagnose.</code></pre>
+
+  <h3>More Targeted Alternatives</h3>
+  <pre><code class="language-cpp">using std::cout;    // brings in ONLY cout, not the entire std namespace
+using std::endl;
+
+int main() {
+    cout &lt;&lt; "Hello" &lt;&lt; endl; // works, without the blanket risk of `using namespace std;`
+    return 0;
+}</code></pre>
+  <p><strong>Best practice used in production codebases:</strong> avoid <code>using namespace std;</code> in header files entirely (it pollutes every file that includes the header), and prefer explicit <code>std::</code> prefixes or targeted <code>using</code> declarations in larger projects.</p>
+
+  <h2>6. Nested Namespaces</h2>
+  <pre><code class="language-cpp">namespace Company {
+    namespace Project {
+        void run() {
+            cout &lt;&lt; "Running project" &lt;&lt; endl;
+        }
+    }
+}
+
+int main() {
+    Company::Project::run();   // fully qualified path through nested namespaces
+    return 0;
+}
+
+// C++17+ shorthand syntax for the same nesting:
+namespace Company::Project {
+    void run() {
+        cout &lt;&lt; "Running project" &lt;&lt; endl;
+    }
+}</code></pre>
+
+  <h2>7. Namespace Aliases</h2>
+  <pre><code class="language-cpp">namespace VeryLongCompanyProjectName {
+    void run() { cout &lt;&lt; "Running"; }
+}
+
+namespace VLC = VeryLongCompanyProjectName; // create a shorter alias
+
+int main() {
+    VLC::run(); // equivalent to VeryLongCompanyProjectName::run()
+    return 0;
+}</code></pre>
+
+  <h2>8. Anonymous (Unnamed) Namespaces</h2>
+  <p>
+    An anonymous namespace restricts the visibility of its contents to the current file only — commonly used (especially in multi-file projects) as a modern, type-safe alternative to C-style <code>static</code> file-local functions/variables.
+  </p>
+  <pre><code class="language-cpp">namespace {
+    int internalCounter = 0;   // only accessible within THIS file
+    void helperFunction() { /* ... */ }
+}</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>What problem do namespaces solve? Give an example of a naming conflict that namespaces would resolve.</li>
+    <li>Why is <code>using namespace std;</code> discouraged in header files or large professional codebases, even though it's convenient in small programs?</li>
+    <li>What does the <code>::</code> scope resolution operator do, and how does it relate to identifying <code>std::cout</code> specifically?</li>
+    <li>What is the practical difference between <code>using namespace std;</code> and <code>using std::cout;</code>?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Create two namespaces, <code>Physics</code> and <code>Chemistry</code>, each defining a constant named <code>CONSTANT</code> with a different value and a function named <code>calculate()</code> with different logic. Demonstrate calling both from <code>main()</code> without conflict.</li>
+    <li>Create a nested namespace <code>Company::Engineering::Backend</code> containing a function <code>deploy()</code>, and call it using both the fully qualified name and a namespace alias.</li>
+    <li>Write a small program demonstrating a genuine naming collision that would occur without namespaces (two same-named functions with different logic), then resolve it using namespaces.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

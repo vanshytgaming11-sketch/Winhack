@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 3.3 — File Handling — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="file-handling">
+  <h1>Module 3.3 — File Handling</h1>
+  <p>
+    C++ provides file I/O through the <code>&lt;fstream&gt;</code> library, which extends the same stream-based paradigm used for <code>cin</code>/<code>cout</code> to reading from and writing to files on disk.
+  </p>
+
+  <h2>1. The Three Stream Classes</h2>
+  <table>
+    <thead>
+      <tr><th>Class</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>ofstream</code></td><td>Output file stream — for WRITING to files</td></tr>
+      <tr><td><code>ifstream</code></td><td>Input file stream — for READING from files</td></tr>
+      <tr><td><code>fstream</code></td><td>Combined stream — for BOTH reading and writing to the same file</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Writing to a File</h2>
+  <pre><code class="language-cpp">#include &lt;fstream&gt;
+using namespace std;
+
+int main() {
+    ofstream outFile("data.txt");   // opens (creates if not existing) data.txt for writing
+
+    if (!outFile) {                    // ALWAYS check the stream opened successfully
+        cout &lt;&lt; "Failed to open file" &lt;&lt; endl;
+        return 1;
+    }
+
+    outFile &lt;&lt; "Hello, File!" &lt;&lt; endl;   // same &lt;&lt; syntax as cout, just writes to the file instead
+    outFile &lt;&lt; "Second line" &lt;&lt; endl;
+
+    outFile.close();                       // closes the file, flushing any buffered data to disk
+    return 0;
+}</code></pre>
+  <p><strong>Important:</strong> by default, <code>ofstream</code> <strong>truncates</strong> (erases) the file's existing content when opened this way — see file modes below to control this.</p>
+
+  <h2>3. Reading from a File</h2>
+  <pre><code class="language-cpp">#include &lt;fstream&gt;
+#include &lt;string&gt;
+using namespace std;
+
+int main() {
+    ifstream inFile("data.txt");
+
+    if (!inFile) {
+        cout &lt;&lt; "Failed to open file" &lt;&lt; endl;
+        return 1;
+    }
+
+    string line;
+    while (getline(inFile, line)) {    // reads one line at a time until EOF
+        cout &lt;&lt; line &lt;&lt; endl;
+    }
+
+    inFile.close();
+    return 0;
+}</code></pre>
+
+  <h3>Reading Word by Word (using <code>&gt;&gt;</code>)</h3>
+  <pre><code class="language-cpp">ifstream inFile("data.txt");
+string word;
+while (inFile &gt;&gt; word) {   // reads a single whitespace-delimited word at a time
+    cout &lt;&lt; word &lt;&lt; " ";
+}
+inFile.close();</code></pre>
+
+  <h3>Reading Mixed Data (numbers and text)</h3>
+  <pre><code class="language-cpp">// Assume file contains: "Vinit 22" (name and age, space-separated)
+ifstream inFile("student.txt");
+string name;
+int age;
+inFile &gt;&gt; name &gt;&gt; age;    // works exactly like cin &gt;&gt; for mixed types
+cout &lt;&lt; name &lt;&lt; " is " &lt;&lt; age &lt;&lt; " years old" &lt;&lt; endl;
+inFile.close();</code></pre>
+
+  <h2>4. File Modes</h2>
+  <p>File modes control exactly how a file is opened — whether to append, truncate, read in binary, etc. Passed as a second argument to the stream constructor (or <code>.open()</code>).</p>
+
+  <table>
+    <thead>
+      <tr><th>Mode flag</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>ios::in</code></td><td>Open for reading (default for <code>ifstream</code>)</td></tr>
+      <tr><td><code>ios::out</code></td><td>Open for writing (default for <code>ofstream</code>) — truncates by default</td></tr>
+      <tr><td><code>ios::app</code></td><td>Append — all writes go to the END of the file, existing content preserved</td></tr>
+      <tr><td><code>ios::ate</code></td><td>Open and immediately seek to the end (but writes can still happen anywhere, unlike <code>app</code>)</td></tr>
+      <tr><td><code>ios::trunc</code></td><td>Truncate — erase existing content on open (this is the default with <code>ios::out</code>)</td></tr>
+      <tr><td><code>ios::binary</code></td><td>Open in binary mode (no text translation of newlines, etc.)</td></tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-cpp">ofstream outFile("data.txt", ios::app);   // append mode — preserves existing content
+outFile &lt;&lt; "New line added at the end" &lt;&lt; endl;
+outFile.close();
+
+// Combining multiple modes with the bitwise OR operator
+fstream file("data.txt", ios::in | ios::out | ios::app);</code></pre>
+
+  <h2>5. Checking Stream State</h2>
+  <pre><code class="language-cpp">ifstream inFile("data.txt");
+
+if (!inFile) { /* ... */ }        // shorthand — true if the stream is in a FAILED state
+if (inFile.fail()) { /* ... */ }    // explicit check for a failure state
+if (inFile.eof()) { /* ... */ }       // true once end-of-file has been reached
+if (inFile.is_open()) { /* ... */ }     // true if the file is currently open</code></pre>
+
+  <p><strong>Common gotcha — checking <code>eof()</code> BEFORE reading is a classic bug:</strong></p>
+  <pre><code class="language-cpp">// WRONG pattern — often reads the last line TWICE (or produces one extra empty iteration)
+while (!inFile.eof()) {
+    getline(inFile, line);
+    cout &lt;&lt; line &lt;&lt; endl;
+}
+
+// CORRECT pattern — let the read operation itself control the loop
+while (getline(inFile, line)) {
+    cout &lt;&lt; line &lt;&lt; endl;
+}</code></pre>
+  <p>The reason: <code>eof()</code> only becomes true <em>after</em> a read attempt has already failed to find more data — checking it beforehand is one iteration "too early," which is why the read-in-the-condition idiom (<code>while (getline(...))</code> or <code>while (cin &gt;&gt; x)</code>) is always the correct pattern.</p>
+
+  <h2>6. Working with an <code>fstream</code> for Both Reading and Writing</h2>
+  <pre><code class="language-cpp">fstream file("data.txt", ios::in | ios::out);
+
+string line;
+while (getline(file, line)) {
+    cout &lt;&lt; line &lt;&lt; endl;
+}
+
+file.clear();                    // must clear the eof/fail flags before further operations
+file.seekp(0, ios::end);          // move the WRITE position to the end
+file &lt;&lt; "Appended via fstream" &lt;&lt; endl;
+
+file.close();</code></pre>
+
+  <h2>7. File Position Pointers — <code>seekg</code> / <code>seekp</code></h2>
+  <table>
+    <thead>
+      <tr><th>Function</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>seekg(pos)</code></td><td>Moves the GET (read) position</td></tr>
+      <tr><td><code>seekp(pos)</code></td><td>Moves the PUT (write) position</td></tr>
+      <tr><td><code>tellg()</code></td><td>Returns the current GET position</td></tr>
+      <tr><td><code>tellp()</code></td><td>Returns the current PUT position</td></tr>
+    </tbody>
+  </table>
+  <pre><code class="language-cpp">ifstream inFile("data.txt");
+inFile.seekg(0, ios::beg);  // move to the beginning
+inFile.seekg(0, ios::end);    // move to the end
+streampos size = inFile.tellg(); // get current position (useful to compute file size)
+cout &lt;&lt; "File size: " &lt;&lt; size &lt;&lt; " bytes";</code></pre>
+
+  <h2>8. Why Always Close (or Let RAII Close) Files</h2>
+  <p>
+    File stream objects (<code>ifstream</code>, <code>ofstream</code>) automatically close the file in their destructor when they go out of scope — so explicit <code>.close()</code> calls aren't strictly mandatory if the stream object's lifetime naturally ends soon after. However, calling <code>.close()</code> explicitly (and checking for errors) is good practice, especially before reusing the same stream object to open a different file.
+  </p>
+  <pre><code class="language-cpp">void writeData() {
+    ofstream outFile("log.txt");
+    outFile &lt;&lt; "Some data";
+    // even without explicit .close(), outFile's destructor closes the file here automatically
+    // when writeData() returns — this is RAII in action (Module 2.2 / Module 5.3)
+}</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain the difference between <code>ios::app</code> and <code>ios::ate</code>.</li>
+    <li>Why is <code>while (!inFile.eof())</code> considered a bug-prone pattern, and what should be used instead?</li>
+    <li>Why does opening an <code>ofstream</code> in default mode erase the file's existing content?</li>
+    <li>Explain why explicitly calling <code>.close()</code> isn't strictly required in most cases, referencing RAII.</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program that writes 5 numbers (entered by the user) to a file <code>numbers.txt</code>, one per line.</li>
+    <li>Write a program that reads <code>numbers.txt</code> from the previous exercise and prints their sum and average.</li>
+    <li>Write a program that appends a new student record (name and marks, space-separated) to <code>students.txt</code> without erasing existing records.</li>
+    <li>Write a program that counts the total number of words, lines, and characters in a given text file.</li>
+    <li>Write a program that reads a file and copies only the lines containing a specific keyword into a new file.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.7 — Heaps — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="heaps-dsa">
+  <h1>Module 6.7 — Heaps</h1>
+  <p>
+    Module 4.3 introduced <code>priority_queue</code> as the STL's ready-made heap, and Module 4.8 covered its array-based internal structure. This module focuses on the algorithmic <strong>top-K pattern</strong> — the most common way heaps appear in interviews — plus how to implement heap operations manually, which interviewers sometimes ask for directly.
+  </p>
+
+  <h2>1. Heap Property Recap</h2>
+  <table>
+    <thead>
+      <tr><th>Type</th><th>Property</th><th>Root holds</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Max-heap</td><td>Every parent ≥ both children</td><td>The maximum element</td></tr>
+      <tr><td>Min-heap</td><td>Every parent ≤ both children</td><td>The minimum element</td></tr>
+    </tbody>
+  </table>
+  <p>Note: a heap is NOT fully sorted — it only guarantees the parent/child ordering, not that siblings or cousins are ordered relative to each other. This weaker guarantee is exactly what makes heap operations faster than maintaining a fully sorted structure.</p>
+
+  <h2>2. Manual Heap Operations (Array-Based)</h2>
+  <p>Recap from Module 4.8: for a node at index <code>i</code> in a 0-indexed array, its parent is at <code>(i-1)/2</code>, and its children are at <code>2i+1</code> and <code>2i+2</code>.</p>
+
+  <h3>Push (Insert) — "Bubble Up"</h3>
+  <pre><code class="language-cpp">class MinHeap {
+    public:
+        vector&lt;int&gt; heap;
+
+        void push(int val) {
+            heap.push_back(val);              // add at the end
+            int i = heap.size() - 1;
+            while (i &gt; 0 &amp;&amp; heap[(i-1)/2] &gt; heap[i]) {   // bubble up while parent is larger
+                swap(heap[(i-1)/2], heap[i]);
+                i = (i-1)/2;
+            }
+        }
+};
+// O(log n) — the new element can bubble up at most the height of the tree, which is O(log n)</code></pre>
+
+  <h3>Pop (Remove Min/Max) — "Sift Down"</h3>
+  <pre><code class="language-cpp">void pop() {
+    heap[0] = heap.back();     // move the LAST element to the root
+    heap.pop_back();
+    int i = 0;
+
+    while (true) {
+        int left = 2*i + 1, right = 2*i + 2, smallest = i;
+
+        if (left &lt; heap.size() &amp;&amp; heap[left] &lt; heap[smallest]) smallest = left;
+        if (right &lt; heap.size() &amp;&amp; heap[right] &lt; heap[smallest]) smallest = right;
+
+        if (smallest == i) break;   // heap property restored — stop
+
+        swap(heap[i], heap[smallest]);
+        i = smallest;
+    }
+}
+// O(log n) — the moved element sifts down at most the height of the tree</code></pre>
+
+  <h2>3. Top-K Elements Pattern</h2>
+  <p>
+    The most frequently tested heap application: finding the K largest (or smallest) elements from a stream or array, in better than O(n log n) (full sort) time.
+  </p>
+
+  <h3>K Largest Elements — Using a MIN-Heap of Size K (the key insight)</h3>
+  <pre><code class="language-cpp">vector&lt;int&gt; kLargest(vector&lt;int&gt; &amp;arr, int k) {
+    priority_queue&lt;int, vector&lt;int&gt;, greater&lt;int&gt;&gt; minHeap;   // min-heap, from Module 4.3
+
+    for (int x : arr) {
+        minHeap.push(x);
+        if (minHeap.size() &gt; k) {
+            minHeap.pop();   // remove the SMALLEST — keeps only the k LARGEST seen so far
+        }
+    }
+
+    vector&lt;int&gt; result;
+    while (!minHeap.empty()) {
+        result.push_back(minHeap.top());
+        minHeap.pop();
+    }
+    return result;
+}
+// O(n log k) time — better than O(n log n) full sort when k is much smaller than n
+// O(k) space — the heap never holds more than k elements at once</code></pre>
+  <p>
+    <strong>Why a MIN-heap for the K LARGEST</strong> (this trips people up at first): the heap always holds the K largest elements seen so far, and its root (the minimum of that set) is exactly the "weakest link" — the first candidate to evict when a new, larger element arrives. Using a max-heap instead would put the largest element at the top, giving no easy way to identify the smallest of the top-K to evict.
+  </p>
+
+  <h3>K Closest Points to Origin (a common variant)</h3>
+  <pre><code class="language-cpp">vector&lt;vector&lt;int&gt;&gt; kClosest(vector&lt;vector&lt;int&gt;&gt; &amp;points, int k) {
+    // MAX-heap of size k, ordered by squared distance — evicts the FARTHEST point when full
+    priority_queue&lt;pair&lt;int, vector&lt;int&gt;&gt;&gt; maxHeap;
+
+    for (auto &amp;p : points) {
+        int dist = p[0]*p[0] + p[1]*p[1];
+        maxHeap.push({dist, p});
+        if (maxHeap.size() &gt; k) {
+            maxHeap.pop();   // remove the FARTHEST
+        }
+    }
+
+    vector&lt;vector&lt;int&gt;&gt; result;
+    while (!maxHeap.empty()) {
+        result.push_back(maxHeap.top().second);
+        maxHeap.pop();
+    }
+    return result;
+}
+// O(n log k) time — the mirror-image logic of kLargest: use a MAX-heap when you want the K SMALLEST</code></pre>
+
+  <h2>4. Kth Largest Element in a Stream (heap that persists across calls)</h2>
+  <pre><code class="language-cpp">class KthLargest {
+    priority_queue&lt;int, vector&lt;int&gt;, greater&lt;int&gt;&gt; minHeap;
+    int k;
+
+    public:
+        KthLargest(int k, vector&lt;int&gt; &amp;nums) : k(k) {
+            for (int n : nums) add(n);
+        }
+
+        int add(int val) {
+            minHeap.push(val);
+            if (minHeap.size() &gt; k) minHeap.pop();
+            return minHeap.top();   // the Kth largest is always the min of a size-k min-heap
+        }
+};
+// Each add() call is O(log k) — much better than re-sorting the entire stream on every insertion</code></pre>
+
+  <h2>5. Merging K Sorted Lists (classic heap application)</h2>
+  <pre><code class="language-cpp">// Using the pair-comparator pattern from Module 4.3
+ListNode* mergeKLists(vector&lt;ListNode*&gt; &amp;lists) {
+    auto cmp = [](ListNode *a, ListNode *b) { return a-&gt;val &gt; b-&gt;val; };   // min-heap by node value
+    priority_queue&lt;ListNode*, vector&lt;ListNode*&gt;, decltype(cmp)&gt; pq(cmp);
+
+    for (ListNode *node : lists) {
+        if (node) pq.push(node);
+    }
+
+    ListNode dummy(0);
+    ListNode *tail = &amp;dummy;
+
+    while (!pq.empty()) {
+        ListNode *smallest = pq.top();
+        pq.pop();
+        tail-&gt;next = smallest;
+        tail = tail-&gt;next;
+
+        if (smallest-&gt;next) pq.push(smallest-&gt;next);
+    }
+
+    return dummy.next;
+}
+// O(N log k) time, where N = total number of nodes across all lists, k = number of lists —
+// far better than the O(N log N) of collecting everything and sorting from scratch</code></pre>
+
+  <h2>6. Heap vs Sorting — When to Choose Which</h2>
+  <table>
+    <thead>
+      <tr><th>Scenario</th><th>Better choice</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Need only the top K out of N elements</td><td>Heap of size K</td><td>O(n log k) &lt; O(n log n) when k &lt;&lt; n</td></tr>
+      <tr><td>Need ALL elements in sorted order</td><td>Full sort</td><td>Heap offers no advantage if you need every element ordered anyway</td></tr>
+      <tr><td>Elements arrive as a continuous stream</td><td>Heap (persists across insertions)</td><td>Re-sorting from scratch on every new element would be far more expensive</td></tr>
+      <tr><td>Need the current min/max repeatedly, with insertions in between</td><td>Heap</td><td>O(log n) insert/extract vs. re-scanning O(n) each time</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why finding the K largest elements uses a MIN-heap rather than a MAX-heap — many people get this backward at first.</li>
+    <li>Why is the top-K heap approach O(n log k) rather than O(n log n), and when does this actually matter in practice?</li>
+    <li>Explain why merging K sorted lists with a heap achieves O(N log k) instead of O(N log N).</li>
+    <li>In what scenario would a full sort be preferable to maintaining a heap, even though a heap has faster insertion?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Implement a max-heap manually (push and pop, array-based, no STL <code>priority_queue</code>) and test it by heap-sorting an array.</li>
+    <li>Write a function to find the K most frequent elements in an array, combining a frequency map (Module 6.5) with a heap of size K.</li>
+    <li>Write a class <code>MedianFinder</code> that supports adding numbers one at a time and finding the running median efficiently, using TWO heaps (a max-heap for the lower half, a min-heap for the upper half).</li>
+    <li>Write a function to reorganize a string so that no two adjacent characters are the same, using a max-heap ordered by character frequency.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

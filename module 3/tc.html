@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 3.6 — Type Casting — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="type-casting">
+  <h1>Module 3.6 — Type Casting</h1>
+  <p>
+    Module 1.1 introduced casting briefly using C-style casts. C++ provides four distinct, purpose-specific casting operators that are safer and more explicit about programmer intent — the compiler can catch more mistakes when it knows exactly what kind of conversion you mean to perform. This is one of the most reliably asked topics in C++ interviews.
+  </p>
+
+  <h2>1. Why Not Just Use C-Style Casts?</h2>
+  <pre><code class="language-cpp">double pi = 3.14159;
+int x = (int)pi;   // C-style cast — works, but ambiguous about WHAT KIND of cast is happening
+                       // Depending on context, a C-style cast can silently perform
+                       // a static_cast, const_cast, or even reinterpret_cast —
+                       // making dangerous conversions easy to write by accident.</code></pre>
+  <p>C++'s four named casts make the <em>kind</em> of conversion explicit in the code itself, are easier to search for in a codebase, and some (like <code>dynamic_cast</code>) provide safety checks that a C-style cast cannot.</p>
+
+  <h2>2. <code>static_cast</code></h2>
+  <p>
+    The most commonly used cast — for well-defined, "sensible" conversions between related types: numeric conversions, pointer conversions within an inheritance hierarchy (without runtime checking), and explicit constructor/conversion-operator invocation.
+  </p>
+  <pre><code class="language-cpp">double pi = 3.14159;
+int x = static_cast&lt;int&gt;(pi);      // 3 — numeric narrowing, explicit and clear intent
+
+int a = 65;
+char c = static_cast&lt;char&gt;(a);        // 'A' — int to char
+
+float f = static_cast&lt;float&gt;(a) / 2;    // forces float division, avoids integer truncation
+
+class Animal {};
+class Dog : public Animal {};
+Animal *animalPtr = new Dog();
+Dog *dogPtr = static_cast&lt;Dog*&gt;(animalPtr); // downcast — NO runtime check; programmer asserts this is safe</code></pre>
+  <p><strong>Key characteristic:</strong> <code>static_cast</code> is checked at <strong>compile time only</strong> — it does not verify at runtime whether a downcast (base → derived) is actually valid. If you're wrong about the actual object type, this becomes undefined behavior. For downcasts where you're not 100% certain, use <code>dynamic_cast</code> instead.</p>
+
+  <h2>3. <code>dynamic_cast</code></h2>
+  <p>
+    Used specifically for safe downcasting within polymorphic class hierarchies (the base class must have at least one <code>virtual</code> function). Unlike <code>static_cast</code>, it performs a <strong>runtime check</strong> and returns <code>nullptr</code> (for pointers) or throws <code>std::bad_cast</code> (for references) if the cast is invalid.
+  </p>
+  <pre><code class="language-cpp">class Animal {
+    public:
+        virtual ~Animal() {}   // MUST have at least one virtual function for dynamic_cast to work
+};
+
+class Dog : public Animal {
+    public:
+        void bark() { cout &lt;&lt; "Woof!"; }
+};
+
+class Cat : public Animal {};
+
+int main() {
+    Animal *a1 = new Dog();
+    Animal *a2 = new Cat();
+
+    Dog *d1 = dynamic_cast&lt;Dog*&gt;(a1);   // succeeds — a1 actually IS a Dog
+    if (d1) {
+        d1-&gt;bark(); // Woof!
+    }
+
+    Dog *d2 = dynamic_cast&lt;Dog*&gt;(a2);   // FAILS — a2 is a Cat, not a Dog
+    if (d2 == nullptr) {
+        cout &lt;&lt; "Cast failed — a2 is not a Dog" &lt;&lt; endl; // this runs
+    }
+
+    delete a1;
+    delete a2;
+    return 0;
+}</code></pre>
+  <p><strong>Why the base class needs a virtual function:</strong> <code>dynamic_cast</code> relies on runtime type information (RTTI), which is only generated for polymorphic classes (those with a vtable, from Module 2.5). Attempting <code>dynamic_cast</code> on a non-polymorphic class hierarchy is a compile error.</p>
+
+  <h2>4. <code>const_cast</code></h2>
+  <p>
+    Used to add or remove the <code>const</code> (or <code>volatile</code>) qualifier from a variable. This is the <strong>only</strong> named cast that can do this — and it should be used sparingly, since modifying something that was declared <code>const</code> for genuinely good reasons is a design smell.
+  </p>
+  <pre><code class="language-cpp">void printValue(int *p) {
+    cout &lt;&lt; *p;
+}
+
+int main() {
+    const int x = 10;
+    // printValue(&amp;x);                       // COMPILE ERROR — can't pass const int* as int*
+    printValue(const_cast&lt;int*&gt;(&amp;x));           // compiles — strips the const qualifier
+
+    return 0;
+}</code></pre>
+
+  <p><strong>The real danger — modifying a truly const object is undefined behavior:</strong></p>
+  <pre><code class="language-cpp">const int x = 10;
+int *p = const_cast&lt;int*&gt;(&amp;x);
+*p = 20;                            // UNDEFINED BEHAVIOR — x was declared genuinely const;
+                                       // the compiler may have placed it in read-only memory,
+                                       // or optimized assuming it never changes.
+cout &lt;&lt; x;                             // might print 10 (old, cached) OR 20 OR crash — unpredictable</code></pre>
+  <p>
+    <code>const_cast</code> is legitimately safe only when the underlying object was <strong>not actually declared <code>const</code></strong> to begin with (e.g., calling a poorly-designed legacy function that takes a non-const pointer but doesn't actually modify the data). Using it to bypass const-correctness on a truly const object is a bug, not a feature.
+  </p>
+
+  <h2>5. <code>reinterpret_cast</code></h2>
+  <p>
+    The most dangerous and least restricted cast — it reinterprets the raw bits of one type as a completely unrelated type, with essentially no safety checks. Used only for low-level operations: pointer-to-integer conversions, interfacing with hardware/OS-level APIs, or converting between unrelated pointer types.
+  </p>
+  <pre><code class="language-cpp">int x = 65;
+int *p = &amp;x;
+
+// Reinterpreting the SAME memory address as a completely different type
+char *charPtr = reinterpret_cast&lt;char*&gt;(p);
+cout &lt;&lt; *charPtr;   // interprets the first byte of x's memory as a char — platform/endianness dependent!
+
+// Converting a pointer to an integer (to print its raw numeric address value)
+uintptr_t addr = reinterpret_cast&lt;uintptr_t&gt;(p);
+cout &lt;&lt; addr;</code></pre>
+  <p><strong>Interview-relevant rule of thumb:</strong> if you find yourself reaching for <code>reinterpret_cast</code> in typical application-level code, it's almost always a sign of a design problem elsewhere — this cast belongs in systems programming, embedded contexts, or serialization code, not everyday logic.</p>
+
+  <h2>6. Summary Table</h2>
+  <table>
+    <thead>
+      <tr><th>Cast</th><th>Purpose</th><th>Safety check</th><th>Typical use case</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>static_cast</code></td><td>General-purpose, related-type conversions</td><td>Compile-time only</td><td>Numeric conversions, well-understood up/downcasts</td></tr>
+      <tr><td><code>dynamic_cast</code></td><td>Safe downcasting in polymorphic hierarchies</td><td>Runtime check (RTTI)</td><td>Downcasting when the actual type isn't certain</td></tr>
+      <tr><td><code>const_cast</code></td><td>Add/remove <code>const</code>/<code>volatile</code></td><td>None</td><td>Interfacing with legacy non-const APIs</td></tr>
+      <tr><td><code>reinterpret_cast</code></td><td>Reinterpret raw bit patterns across unrelated types</td><td>None</td><td>Low-level/systems programming, rarely needed otherwise</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Why are the four named C++ casts generally preferred over C-style casts?</li>
+    <li>Why does <code>dynamic_cast</code> require the base class to have at least one virtual function?</li>
+    <li>Explain the danger of using <code>const_cast</code> to modify an object that was genuinely declared <code>const</code>, versus using it on a non-const object passed through a poorly-typed legacy function.</li>
+    <li>Why is <code>reinterpret_cast</code> considered the most dangerous of the four casts?</li>
+    <li>What is the key behavioral difference between <code>static_cast</code> and <code>dynamic_cast</code> when downcasting an incorrect type?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a base class <code>Shape</code> (with a virtual destructor) and derived classes <code>Circle</code> and <code>Square</code>. Write a function that takes a <code>Shape*</code> and uses <code>dynamic_cast</code> to safely determine and print which specific type it actually is.</li>
+    <li>Demonstrate a correct, safe use of <code>static_cast</code> for numeric conversion (e.g., converting user input from <code>double</code> to <code>int</code> for array indexing), including a comment explaining why <code>static_cast</code> (not <code>dynamic_cast</code>) is appropriate here.</li>
+    <li>Write a small program demonstrating <code>const_cast</code> being used to call a legacy function <code>void oldPrint(char* msg)</code> (which doesn't actually modify its argument) with a <code>const char*</code> string.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

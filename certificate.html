@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Certificate — WinHack</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="courses.html">Courses</a>
+      <a href="cpp.html">C++ Track</a>
+      <a href="certificate.html">Certificate</a>
+    </nav>
+  </header>
+
+  <div class="page-wrap" id="certLanding">
+    <p class="eyebrow">WinHack credential</p>
+    <h1>Certificate test</h1>
+    <p>Finish every module and topic checkbox on the C++ track. Then take a 20-question exam. Score more than 15 (at least 16 correct) to earn a light-theme certificate given by WinHack. Each email can take the test only once per week. The test fills the whole screen — leaving or switching windows is a violation.</p>
+
+    <div class="track-banner">
+      <p>Topics completed: <strong id="certCount">0 / 50</strong></p>
+      <p id="certLocked">The test stays locked until every checkbox is marked.</p>
+      <p id="certUnlocked" hidden>All topics are complete. You can start the test.</p>
+      <p id="certWait" hidden></p>
+      <div class="btn-row" style="justify-content:flex-start">
+        <a class="btn" id="startTestBtn" hidden href="exam.html">Start the test</a>
+        <a class="btn btn-ghost" href="cpp.html">Open the syllabus</a>
+        <a class="btn btn-ghost" id="certExisting" hidden href="cert.html">View certificate</a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p class="footer-brand">WinHack</p>
+      <p>C++ + DSA interview prep. Made by <strong>Vinit Sharma</strong>.</p>
+      <p><a href="tel:+919313302407">+91 9313302407</a> · <a href="mailto:svinit9889@gmail.com">svinit9889@gmail.com</a></p>
+      <p>Need help with the course or certificate? Call or email. Certificates are issued by WinHack.</p>
+      <p class="footer-copy">© 2026 WinHack. All rights reserved.</p>
+    </div>
+  </footer>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="progress.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

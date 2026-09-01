@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 5.6 — Modern STL Usage — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="modern-stl-usage">
+  <h1>Module 5.6 — Modern STL Usage</h1>
+  <p>
+    This module covers three syntax-level improvements introduced across C++11–C++17 that make everyday STL usage cleaner and, in one case, meaningfully faster: <code>emplace_back()</code>, range-based for loops (already used informally throughout this course, formalized here), and structured bindings.
+  </p>
+
+  <h2>1. <code>push_back()</code> vs <code>emplace_back()</code></h2>
+  <p>
+    Both add an element to the end of a container like <code>vector</code>. The difference: <code>push_back()</code> takes an already-constructed object (and copies or moves it in), while <code>emplace_back()</code> takes the CONSTRUCTOR ARGUMENTS directly and constructs the object <strong>in place</strong>, inside the container's memory — avoiding an extra temporary object and its associated copy/move entirely.
+  </p>
+  <pre><code class="language-cpp">class Student {
+    public:
+        string name;
+        int age;
+        Student(string n, int a) : name(n), age(a) {
+            cout &lt;&lt; "Constructed: " &lt;&lt; name &lt;&lt; endl;
+        }
+        Student(const Student &amp;other) : name(other.name), age(other.age) {
+            cout &lt;&lt; "Copied: " &lt;&lt; name &lt;&lt; endl;
+        }
+};
+
+int main() {
+    vector&lt;Student&gt; students;
+
+    students.push_back(Student("Vinit", 22));
+    // Step 1: constructs a TEMPORARY Student("Vinit", 22)   → prints "Constructed: Vinit"
+    // Step 2: MOVES (or copies) that temporary into the vector → possibly prints "Copied: Vinit"
+    // Two steps total: one construction + one copy/move
+
+    students.emplace_back("Aman", 20);
+    // Constructs the Student DIRECTLY inside the vector's memory, using the given arguments
+    // Only prints "Constructed: Aman" — NO temporary object, NO copy/move step at all
+
+    return 0;
+}</code></pre>
+
+  <h3>Why This Matters — Performance</h3>
+  <p>
+    For simple types like <code>int</code>, the difference is negligible. But for classes with expensive copy/move operations (large objects, or objects without a cheap move constructor), <code>emplace_back()</code> can meaningfully reduce unnecessary construction/copy overhead, especially inside tight loops adding many elements.
+  </p>
+  <pre><code class="language-cpp">vector&lt;pair&lt;int,string&gt;&gt; v;
+
+v.push_back(make_pair(1, "a"));   // constructs a pair, then copies/moves it in
+v.emplace_back(1, "a");              // constructs the pair DIRECTLY in place — no intermediate temporary</code></pre>
+
+  <h3>When They Behave Identically</h3>
+  <pre><code class="language-cpp">vector&lt;int&gt; v;
+v.push_back(5);        // for simple types, both are essentially equivalent — negligible difference
+v.emplace_back(5);</code></pre>
+  <p><strong>Modern best practice:</strong> default to <code>emplace_back()</code> for container elements that are class/struct types, since it's never slower and is often faster — but readability is also a valid consideration, since <code>push_back(Student("Vinit", 22))</code> is arguably more explicit about what's being constructed than <code>emplace_back("Vinit", 22)</code>.</p>
+
+  <h2>2. Range-Based For Loops (Formal Recap)</h2>
+  <p>Already used informally since Module 1.2 — here's the complete, formal picture, including how it interacts with <code>auto</code> and const-correctness (fully covered in Module 5.1).</p>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {1, 2, 3, 4, 5};
+
+for (int x : v) { /* x is a COPY */ }               // read-only use, but copies each element
+for (int &amp;x : v) { x *= 2; }                          // MODIFIES v in place
+for (const int &amp;x : v) { cout &lt;&lt; x; }                   // read-only, NO copy — best practice for large types
+for (auto &amp;x : v) { x *= 2; }                              // same as above, with type deduction</code></pre>
+
+  <h3>Range-Based For Over a <code>map</code></h3>
+  <pre><code class="language-cpp">map&lt;string, int&gt; ages = {{"Vinit", 22}, {"Aman", 20}};
+
+for (const auto &amp;entry : ages) {         // entry is a const reference to pair&lt;const string, int&gt;
+    cout &lt;&lt; entry.first &lt;&lt; ": " &lt;&lt; entry.second &lt;&lt; endl;
+}</code></pre>
+
+  <h3>Range-Based For Over a Raw Array</h3>
+  <pre><code class="language-cpp">int arr[5] = {10, 20, 30, 40, 50};
+for (int x : arr) {   // works on plain arrays too, since the compiler knows the array's size at compile time
+    cout &lt;&lt; x &lt;&lt; " ";
+}</code></pre>
+
+  <h2>3. Structured Bindings (C++17+)</h2>
+  <p>
+    Structured bindings let you unpack a <code>pair</code>, <code>tuple</code>, or struct's members directly into named variables in a single statement, eliminating repetitive <code>.first</code>/<code>.second</code> access.
+  </p>
+  <pre><code class="language-cpp">pair&lt;int, string&gt; p = {22, "Vinit"};
+
+// Before structured bindings:
+int age = p.first;
+string name = p.second;
+
+// With structured bindings (C++17+) — much cleaner:
+auto [age2, name2] = p;
+cout &lt;&lt; age2 &lt;&lt; " " &lt;&lt; name2;   // 22 Vinit</code></pre>
+
+  <h3>The Killer Use Case — Iterating a <code>map</code></h3>
+  <pre><code class="language-cpp">map&lt;string, int&gt; ages = {{"Vinit", 22}, {"Aman", 20}};
+
+// Before structured bindings — verbose
+for (const auto &amp;entry : ages) {
+    cout &lt;&lt; entry.first &lt;&lt; ": " &lt;&lt; entry.second &lt;&lt; endl;
+}
+
+// With structured bindings — reads almost like natural language
+for (const auto &amp;[name, age] : ages) {
+    cout &lt;&lt; name &lt;&lt; ": " &lt;&lt; age &lt;&lt; endl;
+}</code></pre>
+
+  <h3>Structured Bindings with Structs</h3>
+  <pre><code class="language-cpp">struct Point {
+    int x, y;
+};
+
+Point p = {3, 4};
+auto [px, py] = p;      // unpacks struct members directly
+cout &lt;&lt; px &lt;&lt; " " &lt;&lt; py;    // 3 4</code></pre>
+
+  <h3>Structured Bindings for Multi-Value Function Returns</h3>
+  <pre><code class="language-cpp">pair&lt;bool, string&gt; validateInput(string input) {
+    if (input.empty()) return {false, "Input cannot be empty"};
+    return {true, "Valid"};
+}
+
+int main() {
+    auto [isValid, message] = validateInput("");
+    cout &lt;&lt; isValid &lt;&lt; " " &lt;&lt; message;   // 0 Input cannot be empty
+    return 0;
+}</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain the core difference between how <code>push_back()</code> and <code>emplace_back()</code> construct an element inside a container.</li>
+    <li>Why does <code>emplace_back()</code> generally offer little to no benefit for containers of simple types like <code>int</code>, but a real benefit for containers of complex class types?</li>
+    <li>What is the readability trade-off some developers cite when choosing between <code>push_back()</code> and <code>emplace_back()</code> for class types?</li>
+    <li>How do structured bindings improve on manually accessing <code>.first</code>/<code>.second</code> when iterating a <code>map</code>?</li>
+  </ol>
+
+  <h3>Predict the Output</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">class Item {
+    public:
+        Item(int x) { cout &lt;&lt; "Constructed "; }
+        Item(const Item&amp;) { cout &lt;&lt; "Copied "; }
+};
+
+int main() {
+    vector&lt;Item&gt; v;
+    v.reserve(2);
+    v.push_back(Item(1));
+    v.emplace_back(2);
+}</code></pre>
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program comparing <code>push_back</code> and <code>emplace_back</code> for a custom class with instrumented constructors, demonstrating the difference in constructor/copy call counts.</li>
+    <li>Rewrite a loop that iterates over a <code>map&lt;string, vector&lt;int&gt;&gt;</code> using structured bindings, printing each key alongside the sum of its vector.</li>
+    <li>Write a function returning a <code>tuple&lt;bool, int, string&gt;</code> (or a nested pair) representing a validation result, and unpack it using structured bindings at the call site.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

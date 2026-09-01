@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.14 — Binary Search on Answer — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="binary-search-on-answer">
+  <h1>Module 6.14 — Binary Search on Answer</h1>
+  <p>
+    Module 4.7 covered <code>binary_search</code> for finding a value directly within a sorted array. This module covers a more advanced application: binary searching over a <strong>range of possible answers</strong> to an optimization problem, even when no explicit sorted array exists — as long as the underlying feasibility condition is monotonic.
+  </p>
+
+  <h2>1. The Core Idea — Search the Answer Space, Not the Data</h2>
+  <p>
+    Instead of asking "is X in this array," this pattern asks "what is the smallest/largest value X such that condition(X) is true," where checking <code>condition(X)</code> for any single candidate X is efficient, and the condition is <strong>monotonic</strong> — once it becomes true (or false), it stays that way for all larger values.
+  </p>
+  <pre><code>Example monotonic pattern:
+condition(X):  false false false true true true true true
+                                  ^
+                            the answer we want — the FIRST X where it becomes true
+
+This shape (a clean flip from false to true) is EXACTLY what binary search requires —
+it doesn't matter that X isn't an array index; it's a candidate VALUE in a search space.</code></pre>
+
+  <h2>2. The General Template</h2>
+  <pre><code class="language-cpp">int binarySearchOnAnswer(int lo, int hi) {
+    while (lo &lt; hi) {
+        int mid = lo + (mid - lo) / 2;  // placeholder — see the corrected version below
+        if (isFeasible(mid)) {
+            hi = mid;        // mid works — try to find an even BETTER (smaller) answer
+        } else {
+            lo = mid + 1;      // mid doesn't work — need a LARGER value
+        }
+    }
+    return lo;   // lo == hi — the smallest value for which isFeasible() is true
+}</code></pre>
+  <pre><code class="language-cpp">// Corrected — proper midpoint computation:
+int binarySearchOnAnswer(int lo, int hi) {
+    while (lo &lt; hi) {
+        int mid = lo + (hi - lo) / 2;   // avoids potential overflow compared to (lo+hi)/2
+        if (isFeasible(mid)) {
+            hi = mid;
+        } else {
+            lo = mid + 1;
+        }
+    }
+    return lo;
+}</code></pre>
+  <p><strong>Why <code>lo + (hi - lo) / 2</code> instead of <code>(lo + hi) / 2</code>:</strong> if <code>lo</code> and <code>hi</code> are both large, their sum could overflow <code>int</code>'s range before the division happens — this rewritten form avoids that risk entirely, a detail worth mentioning explicitly in an interview.</p>
+
+  <h2>3. Classic Example — "Minimize the Maximum" — Split Array Largest Sum</h2>
+  <p>Given an array and a number of subarrays K, split the array into K contiguous parts to MINIMIZE the largest sum among the parts.</p>
+  <pre><code class="language-cpp">bool canSplit(vector&lt;int&gt; &amp;nums, int k, long maxSum) {
+    int subarrays = 1;
+    long currentSum = 0;
+
+    for (int num : nums) {
+        if (currentSum + num &gt; maxSum) {   // adding this element would exceed the cap — start a NEW subarray
+            subarrays++;
+            currentSum = num;
+            if (subarrays &gt; k) return false;   // used too many subarrays — this maxSum is TOO SMALL to work
+        } else {
+            currentSum += num;
+        }
+    }
+    return true;   // successfully split into k or fewer subarrays, respecting the cap
+}
+
+int splitArray(vector&lt;int&gt; &amp;nums, int k) {
+    long lo = *max_element(nums.begin(), nums.end());   // the answer can't be smaller than the LARGEST single element
+    long hi = accumulate(nums.begin(), nums.end(), 0L);    // the answer can't be larger than the TOTAL sum (k=1 case)
+
+    while (lo &lt; hi) {
+        long mid = lo + (hi - lo) / 2;   // mid = a CANDIDATE maximum-subarray-sum cap
+
+        if (canSplit(nums, k, mid)) {
+            hi = mid;         // this cap WORKS — try to find a smaller (better) cap
+        } else {
+            lo = mid + 1;        // this cap is TOO SMALL — need a larger one
+        }
+    }
+    return lo;
+}
+// O(n log(sum)) time — canSplit() is O(n), called O(log(range of possible sums)) times
+// This is DRAMATICALLY better than trying every possible split combination directly,
+// which would be combinatorially expensive</code></pre>
+
+  <h3>Why This Is Monotonic (the key justification)</h3>
+  <p>
+    If a maximum-sum cap of X allows a valid split into ≤ K subarrays, then ANY larger cap X' &gt; X also allows a valid split (it's strictly easier — more room per subarray). This monotonic "once true, always true for larger values" property is exactly what makes binary search on the answer valid here.
+  </p>
+
+  <h2>4. Another Classic — Koko Eating Bananas (Minimum Feasible Rate)</h2>
+  <pre><code class="language-cpp">bool canFinish(vector&lt;int&gt; &amp;piles, int speed, int hours) {
+    long totalHours = 0;
+    for (int pile : piles) {
+        totalHours += (pile + speed - 1) / speed;   // ceiling division — hours needed for this pile at this speed
+    }
+    return totalHours &lt;= hours;
+}
+
+int minEatingSpeed(vector&lt;int&gt; &amp;piles, int hours) {
+    int lo = 1;                                       // slowest conceivable speed
+    int hi = *max_element(piles.begin(), piles.end());  // no need to eat faster than the largest single pile
+
+    while (lo &lt; hi) {
+        int mid = lo + (hi - lo) / 2;   // candidate eating speed
+
+        if (canFinish(piles, mid, hours)) {
+            hi = mid;         // this speed WORKS — try a slower (smaller) speed
+        } else {
+            lo = mid + 1;        // too slow — need to eat FASTER
+        }
+    }
+    return lo;
+}
+// O(n log(max pile size)) time — same structural pattern as splitArray above:
+// binary search over the CANDIDATE ANSWER (eating speed), with an O(n) feasibility check per candidate</code></pre>
+
+  <h2>5. Recognizing This Pattern — Signal Checklist</h2>
+  <ul>
+    <li>The problem asks to "minimize the maximum" or "maximize the minimum" of something.</li>
+    <li>There's a clear, checkable feasibility function: "can this specific candidate value work?"</li>
+    <li>The feasibility function is monotonic across the range of possible answers.</li>
+    <li>A brute-force approach would mean testing every possible answer value one by one, each requiring its own O(n) check — binary search reduces this to O(log(range)) checks instead.</li>
+</ul>
+
+  <h2>6. Comparing to Standard Binary Search (Module 4.7)</h2>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>Standard binary search</th><th>Binary search on answer</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Searches over</td><td>A sorted ARRAY of existing values</td><td>An ABSTRACT range of candidate answer values</td></tr>
+      <tr><td>Comparison basis</td><td>Direct value comparison (<code>arr[mid]</code> vs target)</td><td>A custom feasibility function, <code>isFeasible(mid)</code></td></tr>
+      <tr><td>What's returned</td><td>An index or boolean (found/not found)</td><td>The optimal answer value itself</td></tr>
+      <tr><td>Requires data to be sorted</td><td>Yes, explicitly</td><td>No explicit array — relies on the feasibility function being monotonic instead</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain what "monotonic feasibility" means in the context of binary search on answer, and why it's the property that makes this technique valid.</li>
+    <li>Why is <code>lo + (hi - lo) / 2</code> preferred over <code>(lo + hi) / 2</code> for computing the midpoint?</li>
+    <li>In the Split Array problem, explain why <code>lo</code> is initialized to the array's maximum element and <code>hi</code> to the total sum — why are these the correct bounds?</li>
+    <li>Compare standard binary search (on a sorted array) to binary search on answer — what's the same about their core loop structure, and what's fundamentally different?</li>
+    <li>What signal in a problem statement should make you consider this pattern over a more direct approach?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function to find the square root of a non-negative integer using binary search on answer (without using <code>sqrt()</code>), returning the floor of the actual square root.</li>
+    <li>Write a function solving the "capacity to ship packages within D days" problem: given package weights and a number of days, find the minimum ship capacity needed to ship all packages within that many days.</li>
+    <li>Write a function to find the minimum number of days needed to make M bouquets from a garden of flowers that bloom on given days, where each bouquet requires K adjacent already-bloomed flowers.</li>
+    <li>Write a function to find the K-th smallest element in a sorted matrix (rows and columns both sorted) using binary search on the value range, rather than a heap-based approach.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

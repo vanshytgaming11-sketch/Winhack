@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.11 — Trie — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="trie">
+  <h1>Module 6.11 — Trie</h1>
+  <p>
+    A trie (pronounced "try," from re<strong>trie</strong>val) is a tree-like structure specialized for storing and querying strings, where each path from the root spells out a prefix. Tries make prefix-based operations — "does any word start with this prefix," autocomplete, spell-checking — dramatically faster than scanning a list of strings.
+  </p>
+
+  <h2>1. Trie Structure</h2>
+  <p>
+    Each node represents a single character position and holds pointers to its possible next characters (commonly an array of 26 for lowercase English letters, or a hash map for a larger/sparser alphabet), plus a flag marking whether a complete word ends at that node.
+  </p>
+  <pre><code class="language-cpp">class TrieNode {
+    public:
+        TrieNode *children[26];   // one slot per lowercase letter 'a'-'z'
+        bool isEndOfWord;
+
+        TrieNode() : isEndOfWord(false) {
+            for (int i = 0; i &lt; 26; i++) children[i] = nullptr;
+        }
+};</code></pre>
+
+  <h2>2. Insert</h2>
+  <pre><code class="language-cpp">class Trie {
+    public:
+        TrieNode *root;
+
+        Trie() {
+            root = new TrieNode();
+        }
+
+        void insert(string word) {
+            TrieNode *curr = root;
+            for (char c : word) {
+                int idx = c - 'a';   // maps 'a'-&gt;0, 'b'-&gt;1, ..., 'z'-&gt;25
+                if (curr-&gt;children[idx] == nullptr) {
+                    curr-&gt;children[idx] = new TrieNode();   // create the path if it doesn't exist yet
+                }
+                curr = curr-&gt;children[idx];
+            }
+            curr-&gt;isEndOfWord = true;   // mark the final node as a complete word
+        }
+};
+// O(L) time, where L = length of the word being inserted — independent of how many
+// words are already in the trie</code></pre>
+
+  <h2>3. Search (Exact Word)</h2>
+  <pre><code class="language-cpp">bool search(string word) {
+    TrieNode *curr = root;
+    for (char c : word) {
+        int idx = c - 'a';
+        if (curr-&gt;children[idx] == nullptr) return false;   // path doesn't exist — word isn't present
+        curr = curr-&gt;children[idx];
+    }
+    return curr-&gt;isEndOfWord;   // path exists, but MUST also be marked as a complete word, not just a prefix
+}
+// O(L) time — L = length of the search word</code></pre>
+  <p><strong>Critical detail — <code>isEndOfWord</code> matters:</strong> if the trie contains "apple" but not "app", searching for "app" must return <code>false</code> even though the path a→p→p exists — because that path is only a <em>prefix</em> of "apple," not a complete inserted word itself. This is exactly why the flag is checked, not just path existence.</p>
+
+  <h2>4. StartsWith (Prefix Check)</h2>
+  <pre><code class="language-cpp">bool startsWith(string prefix) {
+    TrieNode *curr = root;
+    for (char c : prefix) {
+        int idx = c - 'a';
+        if (curr-&gt;children[idx] == nullptr) return false;
+        curr = curr-&gt;children[idx];
+    }
+    return true;   // path exists — SOME word in the trie starts with this prefix
+                      // (no isEndOfWord check needed here, unlike search())
+}
+// O(L) time — the entire reason a trie beats a plain list of strings for this exact
+// operation: checking "does any string start with X" against N strings of length L
+// naively costs O(N*L), but a trie answers it in O(L), REGARDLESS of how many words are stored</code></pre>
+
+  <h2>5. Full Working Example</h2>
+  <pre><code class="language-cpp">int main() {
+    Trie trie;
+    trie.insert("apple");
+
+    cout &lt;&lt; trie.search("apple");     // true — exact word exists
+    cout &lt;&lt; trie.search("app");         // false — "app" was never explicitly inserted as a complete word
+    cout &lt;&lt; trie.startsWith("app");        // true — "apple" starts with "app"
+
+    trie.insert("app");
+    cout &lt;&lt; trie.search("app");               // true — now it's ALSO been inserted as its own complete word
+    return 0;
+}</code></pre>
+
+  <h2>6. Word Dictionary with Wildcard Search (a common extension)</h2>
+  <p>A frequent follow-up: support a <code>.</code> wildcard that can match ANY single character, requiring backtracking-style search (Module 6.9) through the trie.</p>
+  <pre><code class="language-cpp">bool searchWithWildcard(TrieNode *node, string &amp;word, int index) {
+    if (node == nullptr) return false;
+    if (index == word.length()) return node-&gt;isEndOfWord;
+
+    char c = word[index];
+    if (c == '.') {
+        // Wildcard — try EVERY possible child, succeed if ANY path leads to a match
+        for (int i = 0; i &lt; 26; i++) {
+            if (searchWithWildcard(node-&gt;children[i], word, index + 1)) {
+                return true;
+            }
+        }
+        return false;
+    } else {
+        return searchWithWildcard(node-&gt;children[c - 'a'], word, index + 1);
+    }
+}
+// O(26^m) worst case, where m = number of wildcard characters — degrades toward
+// brute force when wildcards dominate, but performs like normal O(L) trie search
+// when few or no wildcards are present</code></pre>
+
+  <h2>7. Why a Trie Over a Hash Set of Strings?</h2>
+  <table>
+    <thead>
+      <tr><th>Operation</th><th>Hash set of strings</th><th>Trie</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Exact word search</td><td>O(L) average (hashing the whole string)</td><td>O(L)</td></tr>
+      <tr><td>"Does any word start with prefix X?"</td><td>O(N*L) — must check every stored string</td><td>O(L) — independent of how many words are stored</td></tr>
+      <tr><td>Autocomplete (list all words with a prefix)</td><td>O(N*L) scan, then filter</td><td>O(L) to reach the prefix node, then traverse just that subtree</td></tr>
+      <tr><td>Memory</td><td>Generally lower — no shared structure</td><td>Higher — but SHARES memory across common prefixes (e.g., "app", "apple", "application" share the "app" path)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why <code>search()</code> must check <code>isEndOfWord</code> while <code>startsWith()</code> does not, even though both traverse the trie the same way.</li>
+    <li>Why is a trie's prefix-checking operation O(L) regardless of how many words are stored, while a hash set requires scanning all stored words for the same check?</li>
+    <li>What memory trade-off does a trie make compared to a hash set of strings, and why does it still often win for prefix-heavy workloads?</li>
+    <li>Why does wildcard search potentially degrade to O(26^m) — what specifically causes the exponential blowup?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Extend the <code>Trie</code> class with a <code>countWordsWithPrefix(string prefix)</code> method that returns how many stored words start with the given prefix.</li>
+    <li>Write a function using a trie to find the longest common prefix among an array of strings.</li>
+    <li>Implement an autocomplete feature: given a trie of dictionary words and a prefix, return all complete words in the trie that start with that prefix.</li>
+    <li>Write a function using a trie to determine if a given string can be segmented into a sequence of dictionary words (word break problem), combining trie lookup with DP (Module 6.10) memoization.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

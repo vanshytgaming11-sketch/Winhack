@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 7.4 — System Design Basics (Optional) — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="system-design-basics">
+  <h1>Module 7.4 — System Design Basics (Optional)</h1>
+  <p>
+    <strong>This sub-topic is explicitly optional</strong> for the fresher/intern track — as noted in the original syllabus, it's only relevant if targeting SDE-2+ roles or backend-heavy positions where a system design round is likely. If your interview pipeline is purely DSA-focused (common for fresher and intern hiring), this can be safely skipped or deferred. It's included here as a brief orientation in case it becomes relevant later.
+  </p>
+
+  <h2>1. How System Design Differs from DSA Interviews</h2>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>DSA interview (Modules 6–7.1–7.3)</th><th>System design interview</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Goal</td><td>Produce a correct, efficient algorithm for a well-defined problem</td><td>Design a scalable, reliable architecture for an ambiguous, open-ended problem</td></tr>
+      <tr><td>Correctness</td><td>Usually a single correct answer (or a small set of optimal approaches)</td><td>Many reasonable designs exist — evaluated on tradeoffs and justification, not a single "right" answer</td></tr>
+      <tr><td>Time scale</td><td>Milliseconds to seconds (algorithm runtime)</td><td>Requests per second, storage growth over months/years, geographic latency</td></tr>
+      <tr><td>Typical duration</td><td>30–45 minutes, one problem</td><td>45–60 minutes, one open-ended system</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Core Vocabulary (Orientation Only — Not a Full Treatment)</h2>
+  <table>
+    <thead>
+      <tr><th>Term</th><th>Brief meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Load balancer</td><td>Distributes incoming requests across multiple servers to avoid overloading any single one</td></tr>
+      <tr><td>Horizontal vs vertical scaling</td><td>Horizontal: adding more machines. Vertical: making one machine more powerful</td></tr>
+      <tr><td>Caching</td><td>Storing frequently accessed data in fast-access memory to reduce load on slower underlying storage</td></tr>
+      <tr><td>Database sharding</td><td>Splitting a database across multiple machines, each holding a portion of the data</td></tr>
+      <tr><td>CAP theorem</td><td>A distributed system can only guarantee two of Consistency, Availability, and Partition tolerance at once</td></tr>
+      <tr><td>Latency vs throughput</td><td>Latency: time for one request to complete. Throughput: total requests handled per unit time</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. A Rough Approach Structure (If This Round Applies to You)</h2>
+  <ol>
+    <li><strong>Clarify requirements</strong> — functional (what must the system do) and non-functional (how many users, how much data, read-heavy or write-heavy, consistency requirements).</li>
+    <li><strong>Estimate scale</strong> — rough back-of-envelope numbers for requests/second, storage growth, bandwidth — this shapes every subsequent decision.</li>
+    <li><strong>Sketch a high-level design</strong> — the major components (clients, load balancer, application servers, database, cache) and how data flows between them.</li>
+    <li><strong>Deep-dive on 1–2 components</strong> — the interviewer usually steers this; go deeper on whichever piece is most interesting or most load-bearing for the system's core requirement.</li>
+    <li><strong>Discuss tradeoffs</strong> — explicitly name what you're optimizing for and what you're sacrificing (e.g., "I'm choosing eventual consistency here to prioritize availability, since [reasoning]").</li>
+  </ol>
+
+  <h2>4. Why This Module Stays Brief Here</h2>
+  <p>
+    System design is a large enough discipline that it warrants its own dedicated resource, not a single sub-topic tacked onto a DSA-focused syllabus — this section exists only to orient you on whether/when to seek that out, not to replace it. Given your current focus on DSA interview prep for fresher/intern roles (per your syllabus notes), this is correctly deprioritized until it becomes relevant to your specific interview pipeline.
+  </p>
+
+  <h2>Practice Questions</h2>
+  <p>
+    No practice problems are included here, consistent with this sub-topic's optional, orientation-only scope. If/when this becomes relevant to your target roles, the natural next step is a dedicated system design resource (book, course, or structured problem set) covering the vocabulary and approach structure above in real depth — well beyond what a single sub-topic can responsibly provide.
+  </p>
+
+  <h2>Next: WinHack certificate</h2>
+  <p>
+    You have reached the end of the C++ + DSA track. Mark every topic complete on the syllabus, then take the 20-question exam. Score more than 15 to receive a certificate given by WinHack.
+  </p>
+  <p><a class="btn" href="../certificate.html">Go to the certificate test</a></p>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

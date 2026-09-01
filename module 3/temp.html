@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 3.1 — Templates — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="templates">
+  <h1>Module 3.1 — Templates</h1>
+  <p>
+    Templates let you write a single function or class that works with <strong>any data type</strong>, without duplicating code for each type. The compiler generates a specific version of the function/class for each type actually used, at compile time — this is called <strong>generic programming</strong>, and it's the foundation the entire STL (Module 4) is built on.
+  </p>
+
+  <h2>1. Function Templates</h2>
+  <p>Without templates, you'd need to overload the same logic manually for every type:</p>
+  <pre><code class="language-cpp">int maxInt(int a, int b) { return (a &gt; b) ? a : b; }
+double maxDouble(double a, double b) { return (a &gt; b) ? a : b; }
+// Repetitive — same logic, different types</code></pre>
+
+  <p>A function template eliminates this duplication:</p>
+  <pre><code class="language-cpp">template &lt;typename T&gt;
+T maxVal(T a, T b) {
+    return (a &gt; b) ? a : b;
+}
+
+int main() {
+    cout &lt;&lt; maxVal(3, 7) &lt;&lt; endl;         // T deduced as int → 7
+    cout &lt;&lt; maxVal(3.5, 2.1) &lt;&lt; endl;       // T deduced as double → 3.5
+    cout &lt;&lt; maxVal('a', 'z') &lt;&lt; endl;         // T deduced as char → z
+    cout &lt;&lt; maxVal&lt;double&gt;(3, 7) &lt;&lt; endl;       // explicit instantiation — forces T = double
+    return 0;
+}</code></pre>
+
+  <p><code>typename</code> and <code>class</code> are interchangeable in this context — both just mean "T is a placeholder for some type":</p>
+  <pre><code class="language-cpp">template &lt;class T&gt;   // equivalent to `template &lt;typename T&gt;`
+T maxVal(T a, T b) { return (a &gt; b) ? a : b; }</code></pre>
+
+  <h3>How Compilation Works — Template Instantiation</h3>
+  <p>
+    Templates aren't compiled into a single generic function. Instead, the compiler generates a completely separate, concrete version of the function for <strong>each distinct type</strong> it's called with — this process is called <strong>instantiation</strong>. Calling <code>maxVal(3, 7)</code> and <code>maxVal(3.5, 2.1)</code> effectively produces two separate compiled functions, <code>maxVal&lt;int&gt;</code> and <code>maxVal&lt;double&gt;</code>, even though you wrote the logic only once.
+  </p>
+
+  <h3>Multiple Template Parameters</h3>
+  <pre><code class="language-cpp">template &lt;typename T1, typename T2&gt;
+void printPair(T1 a, T2 b) {
+    cout &lt;&lt; a &lt;&lt; " " &lt;&lt; b &lt;&lt; endl;
+}
+
+int main() {
+    printPair(1, "hello");    // T1 = int, T2 = const char*
+    printPair(3.14, 'x');       // T1 = double, T2 = char
+    return 0;
+}</code></pre>
+
+  <h2>2. Class Templates</h2>
+  <p>The same idea applies to entire classes — a template class can hold or operate on data of any type.</p>
+
+  <pre><code class="language-cpp">template &lt;typename T&gt;
+class Box {
+    private:
+        T value;
+    public:
+        Box(T v) : value(v) {}
+
+        T getValue() {
+            return value;
+        }
+
+        void setValue(T v) {
+            value = v;
+        }
+};
+
+int main() {
+    Box&lt;int&gt; intBox(42);           // T = int
+    Box&lt;string&gt; strBox("Hello");     // T = string
+
+    cout &lt;&lt; intBox.getValue() &lt;&lt; endl;    // 42
+    cout &lt;&lt; strBox.getValue() &lt;&lt; endl;      // Hello
+    return 0;
+}</code></pre>
+
+  <p><strong>Note:</strong> unlike function templates, class templates require explicit type specification at instantiation (<code>Box&lt;int&gt;</code>) — the compiler cannot deduce <code>T</code> from constructor arguments alone in all C++ standards (C++17's Class Template Argument Deduction, or CTAD, relaxes this in specific cases, covered briefly in Module 5).</p>
+
+  <h3>A More Complete Example — Generic Stack</h3>
+  <pre><code class="language-cpp">template &lt;typename T&gt;
+class Stack {
+    private:
+        vector&lt;T&gt; data;
+    public:
+        void push(T val) {
+            data.push_back(val);
+        }
+
+        void pop() {
+            if (!data.empty()) data.pop_back();
+        }
+
+        T top() {
+            return data.back();
+        }
+
+        bool isEmpty() {
+            return data.empty();
+        }
+};
+
+int main() {
+    Stack&lt;int&gt; s;
+    s.push(10);
+    s.push(20);
+    cout &lt;&lt; s.top(); // 20
+    s.pop();
+    cout &lt;&lt; s.top();  // 10
+    return 0;
+}</code></pre>
+
+  <h2>3. Template Parameters — Type vs Non-Type</h2>
+  <p>Templates can also accept non-type parameters — constant values known at compile time, not just types:</p>
+  <pre><code class="language-cpp">template &lt;typename T, int SIZE&gt;    // SIZE is a NON-TYPE template parameter
+class FixedArray {
+    private:
+        T data[SIZE];
+    public:
+        int length() { return SIZE; }
+
+        T&amp; operator[](int index) {
+            return data[index];
+        }
+};
+
+int main() {
+    FixedArray&lt;int, 5&gt; arr;    // creates a fixed array of 5 ints, SIZE baked in at compile time
+    arr[0] = 10;
+    cout &lt;&lt; arr.length();       // 5
+    return 0;
+}</code></pre>
+
+  <h2>4. Default Template Arguments</h2>
+  <pre><code class="language-cpp">template &lt;typename T = int&gt;
+class Container {
+    T value;
+    public:
+        Container(T v) : value(v) {}
+        T get() { return value; }
+};
+
+int main() {
+    Container&lt;&gt; c1(10);        // uses default T = int
+    Container&lt;double&gt; c2(3.14); // explicit T = double
+    return 0;
+}</code></pre>
+
+  <h2>5. Template Specialization (brief introduction)</h2>
+  <p>
+    Sometimes the generic template logic doesn't make sense (or needs special handling) for one specific type — template specialization lets you provide a custom implementation for that particular type.
+  </p>
+  <pre><code class="language-cpp">template &lt;typename T&gt;
+class Printer {
+    public:
+        void print(T val) {
+            cout &lt;&lt; val &lt;&lt; endl;
+        }
+};
+
+// Full specialization for bool — prints "true"/"false" instead of 1/0
+template &lt;&gt;
+class Printer&lt;bool&gt; {
+    public:
+        void print(bool val) {
+            cout &lt;&lt; (val ? "true" : "false") &lt;&lt; endl;
+        }
+};
+
+int main() {
+    Printer&lt;int&gt; p1;
+    p1.print(42);          // 42
+
+    Printer&lt;bool&gt; p2;
+    p2.print(true);          // true (not 1) — uses the specialized version
+    return 0;
+}</code></pre>
+
+  <h2>6. Why Templates Matter for the STL</h2>
+  <p>
+    Every STL container you'll use in Module 4 — <code>vector&lt;T&gt;</code>, <code>map&lt;K,V&gt;</code>, <code>stack&lt;T&gt;</code> — is itself a class template. Understanding templates here is what makes the STL's syntax and behavior make sense rather than feeling like memorized magic.
+  </p>
+  <pre><code class="language-cpp">vector&lt;int&gt; v;       // vector is a class template; int is the template argument
+map&lt;string, int&gt; m;   // map takes TWO template parameters — key type and value type</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain template instantiation — why does the compiler generate a separate function/class for each type used with a template?</li>
+    <li>What is the difference between a type template parameter and a non-type template parameter? Give an example of each.</li>
+    <li>Why must class templates usually specify their type explicitly (<code>Box&lt;int&gt;</code>) while function templates can often deduce it automatically from arguments?</li>
+    <li>What is template specialization, and when would you need it?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function template <code>T sum(T arr[], int size)</code> that computes the sum of elements in an array of any numeric type. Test it with both <code>int[]</code> and <code>double[]</code>.</li>
+    <li>Write a class template <code>Pair&lt;T1, T2&gt;</code> that stores two values of potentially different types, with getters for each and a function to swap them (if the types match) or print them.</li>
+    <li>Write a class template <code>Queue&lt;T&gt;</code> (using <code>std::vector&lt;T&gt;</code> internally) supporting <code>enqueue</code>, <code>dequeue</code>, and <code>front</code> operations.</li>
+    <li>Write a function template <code>void printArray(T arr[], int size)</code> and demonstrate it working correctly with an array of <code>int</code>, an array of <code>string</code>, and an array of <code>char</code>.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

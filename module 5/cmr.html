@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 5.5 — Copy &amp; Move Rules — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="copy-move-rules">
+  <h1>Module 5.5 — Copy &amp; Move Rules</h1>
+  <p>
+    This lesson is reserved for the Rule of Three / Five / Zero, when copy and move constructors and assignment operators are generated, and how those rules interact with the smart pointers and move semantics from the rest of Module 5.
+  </p>
+  <h2>What to study here</h2>
+  <ul>
+    <li>Rule of Three, Rule of Five, and Rule of Zero</li>
+    <li>When the compiler deletes or generates copy/move members</li>
+    <li>How <code>unique_ptr</code> members disable copying and enable moving</li>
+    <li>Interview questions: “When would you write a custom destructor?”</li>
+  </ul>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

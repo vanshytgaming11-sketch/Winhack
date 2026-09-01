@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.10 — Dynamic Programming — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="dynamic-programming">
+  <h1>Module 6.10 — Dynamic Programming</h1>
+  <p>
+    Dynamic Programming (DP) solves problems by breaking them into overlapping subproblems, solving each subproblem only ONCE, and reusing (rather than recomputing) those results. Module 1.3 previewed this exact motivation with the exponential naive Fibonacci — this module formalizes DP as a general technique, covering both its two core implementation styles and its most common patterns.
+  </p>
+
+  <h2>1. The Core DP Requirement — Overlapping Subproblems + Optimal Substructure</h2>
+  <p>
+    A problem is a DP candidate when it has: <strong>overlapping subproblems</strong> (the same smaller subproblem is needed multiple times during a naive recursive solution), and <strong>optimal substructure</strong> (the optimal solution to the whole problem can be constructed from optimal solutions to its subproblems).
+  </p>
+
+  <h2>2. Memoization (Top-Down)</h2>
+  <p>
+    Starts from the recursive solution and adds a cache: before computing a subproblem, check if it's already been solved; if so, return the cached result instead of recomputing.
+  </p>
+  <pre><code class="language-cpp">// Naive recursive Fibonacci — O(2^n), from Module 1.3
+int fibNaive(int n) {
+    if (n &lt;= 1) return n;
+    return fibNaive(n-1) + fibNaive(n-2);
+}
+
+// MEMOIZED version — O(n) time, O(n) space (cache + recursion stack)
+unordered_map&lt;int, int&gt; memo;
+
+int fibMemo(int n) {
+    if (n &lt;= 1) return n;
+    if (memo.count(n)) return memo[n];   // ALREADY SOLVED — return cached result immediately
+
+    memo[n] = fibMemo(n-1) + fibMemo(n-2);   // solve, then CACHE before returning
+    return memo[n];
+}
+// A vector&lt;int&gt; cache initialized to -1 (as a "not yet computed" sentinel) is often
+// used instead of unordered_map when the subproblem space is a small, dense range of integers —
+// slightly faster due to O(1) guaranteed array access vs hash map overhead</code></pre>
+
+  <h3>Why Memoization Fixes the Exponential Blowup</h3>
+  <pre><code>Naive recursion tree for fib(5) — note fib(3) computed TWICE, fib(2) THREE times:
+                    fib(5)
+                 /          \
+             fib(4)          fib(3)
+            /      \        /      \
+        fib(3)   fib(2)  fib(2)   fib(1)
+        /    \    /   \   /   \
+    fib(2) fib(1) ...  ...  ...
+
+With memoization, each fib(k) is computed EXACTLY ONCE, then reused instantly
+on every subsequent request — turning O(2^n) into O(n).</code></pre>
+
+  <h2>3. Tabulation (Bottom-Up)</h2>
+  <p>
+    Builds the solution iteratively from the smallest subproblems upward, filling a table (usually an array), without any recursion or call-stack overhead.
+  </p>
+  <pre><code class="language-cpp">int fibTabulation(int n) {
+    if (n &lt;= 1) return n;
+
+    vector&lt;int&gt; dp(n + 1);
+    dp[0] = 0;
+    dp[1] = 1;
+
+    for (int i = 2; i &lt;= n; i++) {
+        dp[i] = dp[i-1] + dp[i-2];   // build UP from already-solved smaller subproblems
+    }
+
+    return dp[n];
+}
+// O(n) time, O(n) space — same complexity as memoization, but NO recursive call stack overhead</code></pre>
+
+  <h3>Space-Optimized Tabulation</h3>
+  <p>Many DP problems only need the last 1-2 previous states, not the entire table — this observation often reduces O(n) space to O(1):</p>
+  <pre><code class="language-cpp">int fibOptimized(int n) {
+    if (n &lt;= 1) return n;
+
+    int prev2 = 0, prev1 = 1;
+    for (int i = 2; i &lt;= n; i++) {
+        int curr = prev1 + prev2;
+        prev2 = prev1;
+        prev1 = curr;
+    }
+    return prev1;
+}
+// O(n) time, O(1) space — the full table was never actually needed, only the last two values</code></pre>
+
+  <h2>4. Memoization vs Tabulation — Comparison</h2>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>Memoization (top-down)</th><th>Tabulation (bottom-up)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Starting point</td><td>The original recursive solution, with a cache added</td><td>Built from scratch, iteratively</td></tr>
+      <tr><td>Call stack overhead</td><td>Yes — recursion depth adds space cost</td><td>No — pure iteration</td></tr>
+      <tr><td>Computes only needed subproblems?</td><td>Yes — only what's actually reached by recursion</td><td>Usually computes ALL subproblems up to n, even unneeded ones</td></tr>
+      <tr><td>Easier to derive from</td><td>A working brute-force recursive solution</td><td>Requires figuring out the correct fill order upfront</td></tr>
+      <tr><td>Space optimization</td><td>Harder to reduce below O(n) (cache + stack)</td><td>Often reducible to O(1) if only recent states are needed</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Common DP Pattern — 0/1 Knapsack</h2>
+  <p>Given items with weights and values, and a weight capacity, maximize total value without exceeding capacity — each item can be used at most once (hence "0/1": include or exclude).</p>
+  <pre><code class="language-cpp">int knapsack(vector&lt;int&gt; &amp;weights, vector&lt;int&gt; &amp;values, int capacity) {
+    int n = weights.size();
+    vector&lt;vector&lt;int&gt;&gt; dp(n + 1, vector&lt;int&gt;(capacity + 1, 0));
+    // dp[i][w] = max value achievable using the FIRST i items, with capacity w
+
+    for (int i = 1; i &lt;= n; i++) {
+        for (int w = 0; w &lt;= capacity; w++) {
+            dp[i][w] = dp[i-1][w];   // OPTION 1: don't include item i-1
+
+            if (weights[i-1] &lt;= w) {   // OPTION 2: include item i-1, if it fits
+                dp[i][w] = max(dp[i][w], dp[i-1][w - weights[i-1]] + values[i-1]);
+            }
+        }
+    }
+    return dp[n][capacity];
+}
+// O(n * capacity) time and space — this is PSEUDO-polynomial: efficient for reasonable
+// capacity values, but can become slow if capacity is astronomically large,
+// since the complexity depends on capacity's VALUE, not just the number of items</code></pre>
+
+  <h2>6. Common DP Pattern — Longest Increasing Subsequence (LIS)</h2>
+  <pre><code class="language-cpp">int lengthOfLIS(vector&lt;int&gt; &amp;nums) {
+    int n = nums.size();
+    vector&lt;int&gt; dp(n, 1);   // dp[i] = length of the longest increasing subsequence ENDING at index i
+
+    for (int i = 1; i &lt;= n - 1; i++) {
+        for (int j = 0; j &lt; i; j++) {
+            if (nums[j] &lt; nums[i]) {
+                dp[i] = max(dp[i], dp[j] + 1);
+            }
+        }
+    }
+
+    return *max_element(dp.begin(), dp.end());
+}
+// O(n²) time — the classic DP approach. An O(n log n) approach exists using
+// binary search (patience sorting technique), but the O(n²) DP version is
+// the standard interview baseline and demonstrates the pattern most clearly.</code></pre>
+
+  <h2>7. Common DP Pattern — Longest Common Subsequence (LCS)</h2>
+  <pre><code class="language-cpp">int longestCommonSubsequence(string text1, string text2) {
+    int m = text1.length(), n = text2.length();
+    vector&lt;vector&lt;int&gt;&gt; dp(m + 1, vector&lt;int&gt;(n + 1, 0));
+    // dp[i][j] = LCS length using the first i chars of text1 and first j chars of text2
+
+    for (int i = 1; i &lt;= m; i++) {
+        for (int j = 1; j &lt;= n; j++) {
+            if (text1[i-1] == text2[j-1]) {
+                dp[i][j] = dp[i-1][j-1] + 1;   // characters match — extend the previous diagonal LCS
+            } else {
+                dp[i][j] = max(dp[i-1][j], dp[i][j-1]);   // no match — take the best of excluding either character
+            }
+        }
+    }
+    return dp[m][n];
+}
+// O(m*n) time and space — a classic 2D DP pattern, foundational for edit distance and
+// diff-tool-style algorithms</code></pre>
+
+  <h2>8. Common DP Pattern — Partition Problems</h2>
+  <pre><code class="language-cpp">// Determine if an array can be partitioned into two subsets with EQUAL sum
+bool canPartition(vector&lt;int&gt; &amp;nums) {
+    int sum = accumulate(nums.begin(), nums.end(), 0);   // Module 4.7
+    if (sum % 2 != 0) return false;   // odd total sum can NEVER split into two equal halves
+
+    int target = sum / 2;
+    vector&lt;bool&gt; dp(target + 1, false);
+    dp[0] = true;   // a sum of 0 is always achievable (the empty subset)
+
+    for (int num : nums) {
+        for (int w = target; w &gt;= num; w--) {   // iterate BACKWARD — prevents reusing the same item twice
+            dp[w] = dp[w] || dp[w - num];
+        }
+    }
+    return dp[target];
+}
+// This is a DISGUISED 0/1 Knapsack: "can we hit exactly this target sum using each
+// item at most once" — recognizing this connection to Knapsack is a key interview insight.
+// O(n * target) time — iterating BACKWARD in the inner loop is what enforces the "each item once" rule,
+// a subtle but critical detail: iterating forward would allow reusing the same item multiple times</code></pre>
+
+  <h2>9. Recognizing DP Problems — Signal Checklist</h2>
+  <ul>
+    <li>The problem asks for a maximum, minimum, count, or yes/no feasibility, involving a sequence of choices.</li>
+    <li>A brute-force recursive solution would revisit the same subproblem multiple times (overlapping subproblems).</li>
+    <li>The problem can be broken into "the answer for a smaller version of the same problem, plus a small amount of extra work."</li>
+    <li>Keywords: "maximum/minimum", "number of ways", "can you achieve", "longest/shortest subsequence/substring."</li>
+  </ul>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain overlapping subproblems and optimal substructure — why does a problem need BOTH properties to be a good DP candidate?</li>
+    <li>Compare memoization and tabulation — in what scenario would memoization be preferable despite its extra call-stack overhead?</li>
+    <li>Explain why the 0/1 Knapsack's complexity, O(n * capacity), is called "pseudo-polynomial" rather than truly polynomial.</li>
+    <li>In the "equal sum partition" problem, explain why the inner loop must iterate backward through capacities, and what would go wrong if it iterated forward instead.</li>
+    <li>Explain how "equal sum partition" is a disguised version of 0/1 Knapsack — what maps to what?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write both a memoized (top-down) and tabulated (bottom-up) solution for the "climbing stairs" problem (count ways to reach step n, taking 1 or 2 steps at a time).</li>
+    <li>Write a DP solution for the "coin change" problem: given coin denominations and a target amount, find the minimum number of coins needed (or -1 if impossible).</link>
+    <li>Write a DP solution for "edit distance": given two strings, find the minimum number of insertions/deletions/substitutions to convert one into the other (extends the LCS pattern above).</li>
+    <li>Write a DP solution for the "house robber" problem: given an array of house values, find the maximum sum obtainable without robbing two adjacent houses.</li>
+    <li>Write a space-optimized (O(1) extra space beyond the input) DP solution for the "maximum subarray sum" problem (Kadane's algorithm).</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

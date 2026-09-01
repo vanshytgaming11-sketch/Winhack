@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1.4 — Arrays &amp; Strings — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="arrays-strings">
+  <h1>Module 1.4 — Arrays &amp; Strings</h1>
+
+  <h2>1. Arrays — Introduction</h2>
+  <p>
+    An array is a fixed-size, contiguous block of memory that stores multiple elements of the <strong>same data type</strong>, accessed using an index. Because elements sit next to each other in memory, array access is O(1) — the address of any element can be computed directly from the base address and the index.
+  </p>
+
+  <h3>Declaration &amp; Initialization</h3>
+  <pre><code class="language-cpp">int arr[5];                       // Declaration only — elements contain garbage values
+int arr[5] = {1, 2, 3, 4, 5};      // Declaration + full initialization
+int arr[5] = {1, 2};               // Partial init — remaining elements auto-initialized to 0
+int arr[] = {1, 2, 3, 4, 5};       // Size inferred from initializer list → size 5
+int arr[5] = {0};                  // All elements initialized to 0
+int arr[5] = {};                   // Also all elements initialized to 0 (C++11+)</code></pre>
+
+  <h3>Accessing Elements</h3>
+  <pre><code class="language-cpp">int arr[5] = {10, 20, 30, 40, 50};
+
+cout &lt;&lt; arr[0]; // 10 — first element (indexing starts at 0)
+cout &lt;&lt; arr[4]; // 50 — last element (index = size - 1)
+
+arr[2] = 99;      // modifies the element at index 2
+cout &lt;&lt; arr[2];    // 99</code></pre>
+
+  <p><strong>Critical interview point — no bounds checking:</strong></p>
+  <pre><code class="language-cpp">int arr[5] = {1, 2, 3, 4, 5};
+cout &lt;&lt; arr[10]; // COMPILES, but is UNDEFINED BEHAVIOR
+                  // C++ does NOT check array bounds at compile or run time.
+                  // This reads garbage memory (or crashes) — a classic source of bugs
+                  // and a very common interview "what's wrong with this code" question.</code></pre>
+
+  <h3>Traversing an Array</h3>
+  <pre><code class="language-cpp">int arr[5] = {10, 20, 30, 40, 50};
+
+// Classic indexed loop
+for (int i = 0; i &lt; 5; i++) {
+    cout &lt;&lt; arr[i] &lt;&lt; " ";
+}
+
+// Range-based for loop (C++11+) — cleaner, no index management
+for (int val : arr) {
+    cout &lt;&lt; val &lt;&lt; " ";
+}
+
+// Using sizeof to compute length generically (only works while arr is a real array, NOT a decayed pointer)
+int size = sizeof(arr) / sizeof(arr[0]); // 20 / 4 = 5
+for (int i = 0; i &lt; size; i++) {
+    cout &lt;&lt; arr[i] &lt;&lt; " ";
+}</code></pre>
+
+  <h2>2. 2D Arrays</h2>
+  <p>A 2D array is essentially an "array of arrays" — commonly used to represent matrices, grids, or tables.</p>
+
+  <pre><code class="language-cpp">int matrix[3][4]; // 3 rows, 4 columns
+
+int matrix[2][3] = {
+    {1, 2, 3},
+    {4, 5, 6}
+};
+
+// Accessing an element
+cout &lt;&lt; matrix[1][2]; // Row 1, Column 2 → 6
+
+// Traversing a 2D array
+for (int i = 0; i &lt; 2; i++) {         // rows
+    for (int j = 0; j &lt; 3; j++) {      // columns
+        cout &lt;&lt; matrix[i][j] &lt;&lt; " ";
+    }
+    cout &lt;&lt; endl;
+}
+// Output:
+// 1 2 3
+// 4 5 6</code></pre>
+
+  <p><strong>Memory layout — row-major order:</strong> C++ stores 2D arrays row by row in contiguous memory. This matters for cache performance — iterating row-by-row (outer loop = row, inner loop = column) is much faster than column-by-column, because it accesses memory sequentially.</p>
+  <pre><code class="language-cpp">// FAST — sequential memory access (row-major traversal)
+for (int i = 0; i &lt; rows; i++)
+    for (int j = 0; j &lt; cols; j++)
+        sum += matrix[i][j];
+
+// SLOWER — jumps around in memory (column-major traversal on a row-major array)
+for (int j = 0; j &lt; cols; j++)
+    for (int i = 0; i &lt; rows; i++)
+        sum += matrix[i][j];</code></pre>
+
+  <h2>3. Arrays and Pointers (preview)</h2>
+  <p>
+    An array name, when used in most expressions, "decays" into a pointer to its first element. This is a foundational concept fully explored in Module 1.5, but it's worth previewing here:
+  </p>
+  <pre><code class="language-cpp">int arr[5] = {10, 20, 30, 40, 50};
+cout &lt;&lt; arr;      // prints an ADDRESS (arr decays to a pointer to arr[0])
+cout &lt;&lt; *arr;      // 10 — dereferencing gives the first element
+cout &lt;&lt; *(arr + 2); // 30 — pointer arithmetic == arr[2]</code></pre>
+
+  <h2>4. C-Style Strings</h2>
+  <p>
+    Before <code>std::string</code>, C++ (inheriting from C) represented text as a <strong>character array terminated by a null character</strong> <code>'\0'</code>. Understanding these is important because they still appear in legacy code, low-level APIs, and are a common interview topic.
+  </p>
+
+  <pre><code class="language-cpp">char str1[6] = {'H', 'e', 'l', 'l', 'o', '\0'}; // manual, must include null terminator
+char str2[] = "Hello";                            // compiler auto-adds '\0' — size becomes 6
+char str3[20] = "Hello";                           // extra space reserved beyond the string content
+
+cout &lt;&lt; str2; // Hello  — cout stops printing at '\0'</code></pre>
+
+  <p><strong>Why the null terminator matters:</strong> C-style strings have no stored length — functions that operate on them (like <code>strlen</code>, or <code>cout &lt;&lt;</code>) scan forward byte by byte until they hit <code>'\0'</code>. If the terminator is missing or overwritten, these functions read into adjacent memory — undefined behavior, and a classic source of buffer overflow bugs.</p>
+
+  <h3>Common <code>&lt;cstring&gt;</code> Functions</h3>
+  <table>
+    <thead>
+      <tr><th>Function</th><th>Purpose</th><th>Example</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>strlen(s)</code></td><td>Returns length (excluding <code>'\0'</code>)</td><td><code>strlen("Hello")</code> → 5</td></tr>
+      <tr><td><code>strcpy(dest, src)</code></td><td>Copies <code>src</code> into <code>dest</code></td><td><code>strcpy(a, "Hi")</code></td></tr>
+      <tr><td><code>strcat(dest, src)</code></td><td>Appends <code>src</code> to end of <code>dest</code></td><td><code>strcat(a, b)</code></td></tr>
+      <tr><td><code>strcmp(s1, s2)</code></td><td>Lexicographic compare; returns 0 if equal, &lt;0 or &gt;0 otherwise</td><td><code>strcmp("abc","abd")</code> → negative</td></tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-cpp">#include &lt;cstring&gt;
+using namespace std;
+
+int main() {
+    char a[20] = "Hello";
+    char b[] = " World";
+
+    cout &lt;&lt; strlen(a) &lt;&lt; endl;   // 5
+
+    strcat(a, b);                  // a becomes "Hello World"
+    cout &lt;&lt; a &lt;&lt; endl;
+
+    char c[20];
+    strcpy(c, "Copied!");
+    cout &lt;&lt; c &lt;&lt; endl;             // Copied!
+
+    cout &lt;&lt; strcmp("apple", "banana") &lt;&lt; endl; // negative — 'a' &lt; 'b'
+    cout &lt;&lt; strcmp("apple", "apple") &lt;&lt; endl;  // 0 — equal
+    return 0;
+}</code></pre>
+
+  <p><strong>Danger with <code>strcpy</code>/<code>strcat</code>:</strong> They don't check destination buffer size — if <code>src</code> is longer than <code>dest</code>'s allocated space, this silently overflows into adjacent memory. This is precisely why <code>std::string</code> is strongly preferred in modern C++.</p>
+
+  <h2>5. <code>std::string</code></h2>
+  <p>
+    <code>std::string</code> (from <code>&lt;string&gt;</code>) is C++'s dynamically-sized, memory-safe string class. It manages its own memory automatically (grows/shrinks as needed), tracks its own length, and provides rich member functions — eliminating most of the pitfalls of C-style strings.
+  </p>
+
+  <pre><code class="language-cpp">#include &lt;string&gt;
+using namespace std;
+
+string s1 = "Hello";
+string s2("World");
+string s3 = s1 + " " + s2;   // Concatenation with + — "Hello World"
+string s4(5, 'x');            // "xxxxx" — 5 copies of 'x'</code></pre>
+
+  <h3>Common Operations</h3>
+  <pre><code class="language-cpp">string s = "Hello, World!";
+
+cout &lt;&lt; s.length() &lt;&lt; endl;   // 13  (also: s.size() — identical, both O(1))
+cout &lt;&lt; s[0] &lt;&lt; endl;          // H  — indexed access, like an array
+cout &lt;&lt; s.at(0) &lt;&lt; endl;        // H  — like [], but throws std::out_of_range if index is invalid
+
+s[0] = 'J';                       // Modifies in place — s becomes "Jello, World!"
+
+cout &lt;&lt; s.substr(0, 5) &lt;&lt; endl;   // "Jello" — substring starting at index 0, length 5
+cout &lt;&lt; s.substr(7) &lt;&lt; endl;        // "World!" — from index 7 to the end
+
+cout &lt;&lt; s.find("World") &lt;&lt; endl;     // 7 — index where "World" starts (string::npos if not found)
+if (s.find("xyz") == string::npos) {
+    cout &lt;&lt; "Not found" &lt;&lt; endl;
+}
+
+s.append("!!!");                       // Adds to the end — s becomes "Jello, World!!!!"
+s.push_back('?');                       // Adds a single character to the end
+s.pop_back();                            // Removes the last character
+
+s.insert(5, " there");                     // Inserts a string at index 5
+s.erase(5, 6);                              // Removes 6 characters starting at index 5
+
+cout &lt;&lt; s.empty() &lt;&lt; endl;                    // false (0) — checks if string is empty
+
+reverse(s.begin(), s.end());                   // Requires &lt;algorithm&gt; — reverses the string in place
+sort(s.begin(), s.end());                       // Requires &lt;algorithm&gt; — sorts characters in place</code></pre>
+
+  <h3>String Comparison</h3>
+  <pre><code class="language-cpp">string a = "apple", b = "banana";
+cout &lt;&lt; (a == b);   // false
+cout &lt;&lt; (a &lt; b);     // true — lexicographic comparison, 'a' &lt; 'b'</code></pre>
+
+  <h3>String Concatenation Gotcha</h3>
+  <pre><code class="language-cpp">string s = "Value: " + 5;         // COMPILE ERROR — can't add int directly to a C-string literal like this
+string s = "Value: " + to_string(5); // CORRECT — to_string() converts int → string first
+cout &lt;&lt; s;                             // "Value: 5"</code></pre>
+
+  <h3>Iterating a <code>std::string</code></h3>
+  <pre><code class="language-cpp">string s = "Hello";
+
+for (int i = 0; i &lt; s.length(); i++) {
+    cout &lt;&lt; s[i] &lt;&lt; " ";
+}
+
+for (char c : s) {          // range-based — cleaner
+    cout &lt;&lt; c &lt;&lt; " ";
+}
+
+for (char &amp;c : s) {          // reference — can modify characters in place
+    c = toupper(c);           // requires &lt;cctype&gt;
+}
+cout &lt;&lt; s;                     // HELLO</code></pre>
+
+  <h3>C-Style String vs <code>std::string</code> — Summary</h3>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>C-style string (<code>char[]</code>)</th><th><code>std::string</code></th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Memory management</td><td>Manual — fixed size, must be pre-allocated</td><td>Automatic — grows/shrinks dynamically</td></tr>
+      <tr><td>Length tracking</td><td>None — must scan for <code>'\0'</code>, O(n)</td><td>Stored internally — <code>.length()</code> is O(1)</td></tr>
+      <tr><td>Safety</td><td>No bounds checking — buffer overflow risk</td><td>Much safer, <code>.at()</code> can throw on invalid access</td></tr>
+      <tr><td>Operations</td><td>Limited to <code>&lt;cstring&gt;</code> functions</td><td>Rich member functions (<code>find</code>, <code>substr</code>, <code>insert</code>, etc.)</td></tr>
+      <tr><td>Interview relevance</td><td>Still asked — legacy code, embedded systems, C interop</td><td>Default choice in modern C++ code</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Common Array/String Interview Patterns (preview)</h2>
+  <p>These specific techniques get their own deep dive in Module 6.2, but a first exposure here helps connect fundamentals to problem-solving:</p>
+  <ul>
+    <li><strong>Two-pointer technique</strong> — using two indices moving toward/away from each other (e.g., checking if a string is a palindrome).</li>
+    <li><strong>Frequency counting</strong> — using an array or map indexed by character/value to count occurrences (e.g., checking anagrams).</li>
+    <li><strong>Sliding window</strong> — maintaining a moving subrange of an array/string to solve subarray/substring problems efficiently.</li>
+  </ul>
+
+  <pre><code class="language-cpp">// Quick example: check if a string is a palindrome using two pointers
+bool isPalindrome(string s) {
+    int left = 0, right = s.length() - 1;
+    while (left &lt; right) {
+        if (s[left] != s[right]) return false;
+        left++;
+        right--;
+    }
+    return true;
+}</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Why does accessing <code>arr[10]</code> on a 5-element array compile successfully but produce undefined behavior at runtime?</li>
+    <li>Explain why row-major traversal of a 2D array is generally faster than column-major traversal.</li>
+    <li>What is the null terminator, and why is it essential for C-style strings? What happens if it's missing or overwritten?</li>
+    <li>Compare <code>s[i]</code> and <code>s.at(i)</code> for a <code>std::string</code> — when would you prefer one over the other?</li>
+    <li>Why does <code>string s = "Value: " + 5;</code> fail to compile, and how do you fix it?</li>
+  </ol>
+
+  <h3>Predict the Output</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">int arr[5] = {1, 2};
+cout &lt;&lt; arr[2] &lt;&lt; " " &lt;&lt; arr[4];</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">char str[] = "Hi";
+cout &lt;&lt; sizeof(str);</code></pre>
+      (Careful — this is <code>sizeof</code>, not <code>strlen</code>.)
+    </li>
+    <li>
+      <pre><code class="language-cpp">string s = "hello";
+s.erase(1, 2);
+cout &lt;&lt; s;</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">string s = "abcdef";
+cout &lt;&lt; s.substr(2);</code></pre>
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program that finds the largest and smallest elements in an array in a single pass (one loop, tracking both simultaneously).</li>
+    <li>Write a program that reverses an array in place, without using any extra array (swap elements from both ends toward the middle).</li>
+    <li>Write a program that checks whether two strings are anagrams of each other, using a frequency-count array of size 26 (assume lowercase letters only).</li>
+    <li>Write a program that takes a sentence and counts the number of vowels, consonants, digits, and spaces in it.</li>
+    <li>Write a program using a 2D array to store and print a 3x3 matrix, then compute and print the transpose of that matrix.</li>
+    <li>Write a program that removes all duplicate characters from a string, preserving the order of first occurrence (e.g., <code>"programming"</code> → <code>"progamin"</code>).</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.9 — Recursion &amp; Backtracking — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="recursion-backtracking">
+  <h1>Module 6.9 — Recursion &amp; Backtracking</h1>
+  <p>
+    Module 1.3 introduced recursion's mechanics. This module covers backtracking — a refinement of recursion where the algorithm explores a decision tree of choices, "undoing" a choice (backtracking) when it leads to a dead end, in order to explore other possibilities. This pattern generates subsets, permutations, and combinations, and solves constraint-satisfaction problems.
+  </p>
+
+  <h2>1. The Backtracking Template</h2>
+  <p>Nearly every backtracking problem follows this same skeleton:</p>
+  <pre><code class="language-cpp">void backtrack(/* state */) {
+    if (/* base case — a complete solution is formed */) {
+        // record the solution
+        return;
+    }
+
+    for (/* each possible choice at this step */) {
+        // 1. MAKE the choice
+        backtrack(/* updated state */);
+        // 2. UNDO the choice (backtrack) — restore state before trying the next choice
+    }
+}</code></pre>
+  <p>The "make choice → recurse → undo choice" pattern is the defining structure of backtracking — it's what allows exhaustively exploring every possibility while reusing the same state/memory across branches, rather than copying it at every step.</p>
+
+  <h2>2. Subsets</h2>
+  <p>Generate all possible subsets (the power set) of a given array — there are 2ⁿ subsets total, since each element is either included or excluded.</p>
+  <pre><code class="language-cpp">void backtrackSubsets(vector&lt;int&gt; &amp;nums, int start, vector&lt;int&gt; &amp;current, vector&lt;vector&lt;int&gt;&gt; &amp;result) {
+    result.push_back(current);   // EVERY state along the way is a valid subset — record immediately, no base-case check needed
+
+    for (int i = start; i &lt; nums.size(); i++) {
+        current.push_back(nums[i]);              // MAKE the choice: include nums[i]
+        backtrackSubsets(nums, i + 1, current, result);
+        current.pop_back();                          // UNDO the choice — try the next possibility
+    }
+}
+
+vector&lt;vector&lt;int&gt;&gt; subsets(vector&lt;int&gt; &amp;nums) {
+    vector&lt;vector&lt;int&gt;&gt; result;
+    vector&lt;int&gt; current;
+    backtrackSubsets(nums, 0, current, result);
+    return result;
+}
+// For nums = {1, 2, 3}:
+// {} {1} {1,2} {1,2,3} {1,3} {2} {2,3} {3}
+// O(2^n) time — matches the total number of subsets; O(n) space for the recursion depth/current vector</code></pre>
+
+  <h3>Tracing the Decision Tree (nums = {1, 2})</h3>
+  <pre><code>                    []
+          include 1 /  \ skip 1
+              [1]          []
+        incl.2/ \skip2   incl.2/ \skip2
+        [1,2]   [1]       [2]     []
+
+Every node visited (not just leaves) is a valid subset — this is why result.push_back(current)
+happens unconditionally at the TOP of the function, not gated behind a base case.</code></pre>
+
+  <h2>3. Permutations</h2>
+  <p>Generate all orderings of a given array — there are n! permutations, since each position has one fewer remaining choice than the last.</p>
+  <pre><code class="language-cpp">void backtrackPermutations(vector&lt;int&gt; &amp;nums, vector&lt;int&gt; &amp;current, vector&lt;bool&gt; &amp;used, vector&lt;vector&lt;int&gt;&gt; &amp;result) {
+    if (current.size() == nums.size()) {   // base case — a full-length permutation is complete
+        result.push_back(current);
+        return;
+    }
+
+    for (int i = 0; i &lt; nums.size(); i++) {
+        if (used[i]) continue;   // skip elements already placed in THIS permutation
+
+        used[i] = true;                          // MAKE the choice
+        current.push_back(nums[i]);
+        backtrackPermutations(nums, current, used, result);
+        current.pop_back();                          // UNDO the choice
+        used[i] = false;
+    }
+}
+
+vector&lt;vector&lt;int&gt;&gt; permute(vector&lt;int&gt; &amp;nums) {
+    vector&lt;vector&lt;int&gt;&gt; result;
+    vector&lt;int&gt; current;
+    vector&lt;bool&gt; used(nums.size(), false);
+    backtrackPermutations(nums, current, used, result);
+    return result;
+}
+// For nums = {1, 2, 3}: 6 permutations (3! = 6)
+// O(n! * n) time — n! permutations, each taking O(n) to copy into the result</code></pre>
+
+  <h2>4. Combinations</h2>
+  <p>Choose K elements out of N, where order does NOT matter (unlike permutations).</p>
+  <pre><code class="language-cpp">void backtrackCombinations(int n, int k, int start, vector&lt;int&gt; &amp;current, vector&lt;vector&lt;int&gt;&gt; &amp;result) {
+    if (current.size() == k) {   // base case — reached the required size
+        result.push_back(current);
+        return;
+    }
+
+    for (int i = start; i &lt;= n; i++) {
+        current.push_back(i);
+        backtrackCombinations(n, k, i + 1, current, result);   // i+1, NOT start — prevents reusing earlier elements
+        current.pop_back();
+    }
+}
+// Very similar structure to subsets, but with a fixed target SIZE rather than recording every state</code></pre>
+
+  <h2>5. Constraint Problems — N-Queens (the canonical advanced backtracking example)</h2>
+  <pre><code class="language-cpp">bool isSafe(vector&lt;string&gt; &amp;board, int row, int col, int n) {
+    // Check this column in all previous rows
+    for (int i = 0; i &lt; row; i++) {
+        if (board[i][col] == 'Q') return false;
+    }
+    // Check upper-left diagonal
+    for (int i = row-1, j = col-1; i &gt;= 0 &amp;&amp; j &gt;= 0; i--, j--) {
+        if (board[i][j] == 'Q') return false;
+    }
+    // Check upper-right diagonal
+    for (int i = row-1, j = col+1; i &gt;= 0 &amp;&amp; j &lt; n; i--, j++) {
+        if (board[i][j] == 'Q') return false;
+    }
+    return true;
+}
+
+void backtrackQueens(vector&lt;string&gt; &amp;board, int row, int n, vector&lt;vector&lt;string&gt;&gt; &amp;result) {
+    if (row == n) {                     // base case — successfully placed a queen in every row
+        result.push_back(board);
+        return;
+    }
+
+    for (int col = 0; col &lt; n; col++) {
+        if (isSafe(board, row, col, n)) {
+            board[row][col] = 'Q';            // MAKE the choice
+            backtrackQueens(board, row + 1, n, result);
+            board[row][col] = '.';               // UNDO the choice
+        }
+        // If NOT safe, we simply skip this column — this IS the "pruning" that makes
+        // backtracking far more efficient than pure brute force
+    }
+}
+// This is backtracking's key advantage over exhaustive brute force: isSafe() PRUNES
+// entire branches of the decision tree early, before wasting time exploring
+// obviously-invalid placements further down</code></pre>
+
+  <h2>6. Why Backtracking Beats Brute Force — Pruning</h2>
+  <p>
+    A pure brute-force approach to N-Queens would generate ALL n^n possible arrangements first, then filter for valid ones afterward — enormously wasteful. Backtracking's <code>isSafe()</code> check happens <strong>before</strong> recursing deeper, immediately abandoning any branch that's already invalid — this pruning is what makes backtracking dramatically faster in practice, even though its theoretical worst case remains exponential.
+  </p>
+
+  <h2>7. Handling Duplicates in Subsets/Permutations (a common follow-up)</h2>
+  <pre><code class="language-cpp">// Subsets II — input MAY contain duplicates; result must NOT contain duplicate subsets
+void backtrackSubsetsUnique(vector&lt;int&gt; &amp;nums, int start, vector&lt;int&gt; &amp;current, vector&lt;vector&lt;int&gt;&gt; &amp;result) {
+    result.push_back(current);
+
+    for (int i = start; i &lt; nums.size(); i++) {
+        if (i &gt; start &amp;&amp; nums[i] == nums[i-1]) continue;   // SKIP duplicate values at the SAME recursion level
+                                                                // (requires nums to be SORTED first!)
+        current.push_back(nums[i]);
+        backtrackSubsetsUnique(nums, i + 1, current, result);
+        current.pop_back();
+    }
+}
+// The `i &gt; start` condition is critical: it only skips a duplicate if it's NOT the first
+// choice at this level — otherwise it would incorrectly skip using the duplicate value entirely</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain the "make choice → recurse → undo choice" pattern — why is undoing the choice (backtracking) necessary, given that <code>current</code> is a shared/reused variable across the whole recursion?</li>
+    <li>Why does the subsets function record every intermediate state, while the permutations function only records at the base case?</li>
+    <li>Explain how <code>isSafe()</code> in N-Queens acts as pruning, and why this makes backtracking faster than generating all n^n arrangements and filtering afterward.</li>
+    <li>In the duplicate-handling subsets variant, explain why the condition is <code>i &gt; start</code> rather than simply <code>nums[i] == nums[i-1]</code>.</li>
+    <li>Why must the input be sorted first when skipping duplicates in subsets/permutations?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a backtracking function to generate all valid combinations of well-formed parentheses for a given N pairs.</li>
+    <li>Write a backtracking function to solve a Sudoku puzzle (9x9 grid, fill empty cells respecting row/column/box constraints).</li>
+    <li>Write a backtracking function to find all unique permutations of an array that MAY contain duplicates (adapt the duplicate-skipping technique from subsets).</li>
+    <li>Write a backtracking function to solve the "word search" problem: given a 2D grid of letters and a target word, determine if the word can be formed by tracing adjacent cells.</li>
+    <li>Write a backtracking function to partition a string into all possible groupings of palindromic substrings.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 4.3 — Container Adaptors — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="container-adaptors">
+  <h1>Module 4.3 — Container Adaptors</h1>
+  <p>
+    Container adaptors don't implement their own storage — instead, they wrap an existing sequence container (by default, <code>deque</code>) and restrict the interface to a specific access pattern (LIFO, FIFO, or priority-based). This restriction is the whole point: it makes the intended usage pattern explicit and prevents misuse.
+  </p>
+
+  <h2>1. <code>std::stack</code> — LIFO (Last In, First Out)</h2>
+  <p>
+    A stack only allows access to the <strong>top</strong> element — think of a stack of plates: you can only add to or remove from the top.
+  </p>
+  <pre><code class="language-cpp">#include &lt;stack&gt;
+using namespace std;
+
+stack&lt;int&gt; s;
+
+s.push(10);       // → top: 10
+s.push(20);         // → top: 20
+s.push(30);           // → top: 30
+
+cout &lt;&lt; s.top();          // 30 — only the top element is accessible
+s.pop();                     // removes 30 (pop() does NOT return the value — unlike some other languages!)
+cout &lt;&lt; s.top();               // 20
+
+cout &lt;&lt; s.size();                // 2
+cout &lt;&lt; s.empty();                 // false</code></pre>
+
+  <p><strong>Common gotcha:</strong> <code>pop()</code> returns <code>void</code> — you must call <code>top()</code> to get the value BEFORE calling <code>pop()</code> to remove it:</p>
+  <pre><code class="language-cpp">int val = s.top();  // get the value first
+s.pop();               // then remove it — this is TWO separate steps in C++</code></pre>
+
+  <h3>Common Use Cases for Stack</h3>
+  <ul>
+    <li>Balanced parentheses checking</li>
+    <li>Undo/redo functionality</li>
+    <li>DFS traversal (iterative version — Module 6.8)</li>
+    <li>Expression evaluation (infix/postfix conversion)</li>
+    <li>Function call stack simulation (recursion — Module 1.3)</li>
+  </ul>
+
+  <pre><code class="language-cpp">// Classic example: balanced parentheses check
+bool isBalanced(string s) {
+    stack&lt;char&gt; st;
+    for (char c : s) {
+        if (c == '(' || c == '[' || c == '{') {
+            st.push(c);
+        } else {
+            if (st.empty()) return false;
+            char top = st.top();
+            st.pop();
+            if ((c == ')' &amp;&amp; top != '(') ||
+                (c == ']' &amp;&amp; top != '[') ||
+                (c == '}' &amp;&amp; top != '{')) {
+                return false;
+            }
+        }
+    }
+    return st.empty();  // must be empty — every open must be matched
+}</code></pre>
+
+  <h2>2. <code>std::queue</code> — FIFO (First In, First Out)</h2>
+  <p>
+    A queue only allows insertion at the back and removal from the front — think of a real-world line/queue: the first person to join is the first to leave.
+  </p>
+  <pre><code class="language-cpp">#include &lt;queue&gt;
+using namespace std;
+
+queue&lt;int&gt; q;
+
+q.push(10);     // → back: 10, front: 10
+q.push(20);       // → back: 20, front: 10
+q.push(30);         // → back: 30, front: 10
+
+cout &lt;&lt; q.front();      // 10 — first element added
+cout &lt;&lt; q.back();          // 30 — most recently added
+
+q.pop();                      // removes from the FRONT (10) — → front is now 20
+cout &lt;&lt; q.front();               // 20
+
+cout &lt;&lt; q.size();                   // 2
+cout &lt;&lt; q.empty();                    // false</code></pre>
+
+  <h3>Common Use Cases for Queue</h3>
+  <ul>
+    <li>BFS traversal (Module 6.8) — the canonical use case</li>
+    <li>Task scheduling / processing in arrival order</li>
+    <li>Buffering / streaming data</li>
+  </ul>
+
+  <h2>3. <code>std::priority_queue</code> — Always Access the "Highest Priority" Element</h2>
+  <p>
+    A priority queue keeps elements ordered such that the <strong>largest</strong> element (by default) is always accessible at the top — internally implemented as a <strong>binary heap</strong> (full internals covered in Module 4.8 and Module 6.7).
+  </p>
+  <pre><code class="language-cpp">#include &lt;queue&gt;
+using namespace std;
+
+priority_queue&lt;int&gt; pq;   // MAX-heap by default
+
+pq.push(30);
+pq.push(10);
+pq.push(50);
+pq.push(20);
+
+cout &lt;&lt; pq.top();   // 50 — the LARGEST element, regardless of insertion order
+
+while (!pq.empty()) {
+    cout &lt;&lt; pq.top() &lt;&lt; " ";  // 50 30 20 10 — always retrieves in descending order
+    pq.pop();
+}</code></pre>
+
+  <h3>Min-Heap Variant</h3>
+  <pre><code class="language-cpp">priority_queue&lt;int, vector&lt;int&gt;, greater&lt;int&gt;&gt; minPQ;   // MIN-heap
+
+minPQ.push(30);
+minPQ.push(10);
+minPQ.push(50);
+
+cout &lt;&lt; minPQ.top();  // 10 — the SMALLEST element now on top
+
+while (!minPQ.empty()) {
+    cout &lt;&lt; minPQ.top() &lt;&lt; " ";  // 10 30 50 — ascending order
+    minPQ.pop();
+}</code></pre>
+  <p><strong>Reading the min-heap declaration:</strong> the three template parameters are <code>priority_queue&lt;ValueType, UnderlyingContainer, ComparisonFunction&gt;</code>. <code>greater&lt;int&gt;</code> flips the ordering so that "greater" elements are treated as lower priority — counterintuitively producing a min-heap.</p>
+
+  <h3>Custom Comparator (e.g., priority queue of pairs)</h3>
+  <pre><code class="language-cpp">// Min-heap of pairs, ordered by .first
+priority_queue&lt;pair&lt;int,int&gt;, vector&lt;pair&lt;int,int&gt;&gt;, greater&lt;pair&lt;int,int&gt;&gt;&gt; pq;
+
+pq.push({5, 100});
+pq.push({2, 200});
+pq.push({8, 300});
+
+cout &lt;&lt; pq.top().first;  // 2 — smallest .first value on top</code></pre>
+
+  <h3>Custom Comparator with a Lambda (C++11+)</h3>
+  <pre><code class="language-cpp">auto cmp = [](int a, int b) { return a &gt; b; };  // reversed logic → produces a min-heap
+priority_queue&lt;int, vector&lt;int&gt;, decltype(cmp)&gt; pq(cmp);
+
+pq.push(30); pq.push(10); pq.push(50);
+cout &lt;&lt; pq.top();  // 10</code></pre>
+
+  <h3>Common Use Cases for Priority Queue</h3>
+  <ul>
+    <li>Top-K element problems (Module 6.7)</li>
+    <li>Dijkstra's shortest path algorithm (Module 6.8)</li>
+    <li>Task scheduling by priority</li>
+    <li>Merging K sorted lists</li>
+  </ul>
+
+  <h2>4. Adaptors Have a Restricted Interface — On Purpose</h2>
+  <p>
+    None of these three containers support iteration with a range-based <code>for</code> loop, indexing with <code>[]</code>, or arbitrary-position access — because that would defeat their entire purpose of enforcing a specific access discipline.
+  </p>
+  <pre><code class="language-cpp">stack&lt;int&gt; s;
+s.push(1); s.push(2);
+// for (int x : s) { }   // COMPILE ERROR — stack has no begin()/end(), by design
+// cout &lt;&lt; s[0];            // COMPILE ERROR — no operator[]</code></pre>
+  <p>If you need to inspect all elements without destroying the container's order, you generally have to pop elements into a temporary structure (or, better, reconsider whether an adaptor is the right container for that use case).</p>
+
+  <h2>5. Underlying Container Choice</h2>
+  <p>
+    Each adaptor wraps another container by default, but this is configurable via a template parameter:
+  </p>
+  <table>
+    <thead>
+      <tr><th>Adaptor</th><th>Default underlying container</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>stack</code></td><td><code>deque</code></td></tr>
+      <tr><td><code>queue</code></td><td><code>deque</code></td></tr>
+      <tr><td><code>priority_queue</code></td><td><code>vector</code></td></tr>
+    </tbody>
+  </table>
+  <pre><code class="language-cpp">stack&lt;int, vector&lt;int&gt;&gt; s;   // explicitly use vector instead of the default deque</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Why don't <code>stack</code>, <code>queue</code>, and <code>priority_queue</code> support range-based for loops or indexing?</li>
+    <li>Explain why <code>greater&lt;int&gt;</code> as the comparator produces a MIN-heap rather than a max-heap — this confuses many people at first.</li>
+    <li>What are container adaptors built on top of, by default, for each of the three types?</li>
+    <li>Give one real-world algorithmic scenario each for <code>stack</code>, <code>queue</code>, and <code>priority_queue</code> where that specific structure is the natural choice.</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function that checks whether a given string of brackets (<code>()[]{}</code>) is balanced, using a <code>stack</code>.</li>
+    <li>Write a program that reverses a queue using only a <code>stack</code> as auxiliary storage (no other container allowed).</li>
+    <li>Write a program that finds the K largest elements in an array using a <code>priority_queue</code> (min-heap of size K approach).</li>
+    <li>Write a program that simulates a simple task scheduler: tasks are pushed with a priority number, and processed by popping the highest-priority task each time using a <code>priority_queue&lt;pair&lt;int,string&gt;&gt;</code>.</li>
+    <li>Write a function using a <code>stack</code> to evaluate a postfix expression (e.g., <code>"5 3 + 2 *"</code> → 16).</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 4.4 — Ordered Associative Containers — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="ordered-associative">
+  <h1>Module 4.4 — Ordered Associative Containers</h1>
+  <p>
+    Associative containers store elements organized by <strong>key</strong>, automatically maintaining sorted order. Internally, both <code>set</code> and <code>map</code> are implemented as a <strong>self-balancing binary search tree</strong> (typically a Red-Black Tree), which is why every core operation runs in O(log n) — full internal detail in Module 4.8.
+  </p>
+
+  <h2>1. <code>std::set</code></h2>
+  <p>Stores <strong>unique</strong> elements in automatically sorted order. No duplicates are allowed — inserting an existing value is silently ignored.</p>
+
+  <pre><code class="language-cpp">#include &lt;set&gt;
+using namespace std;
+
+set&lt;int&gt; s;
+
+s.insert(30);
+s.insert(10);
+s.insert(20);
+s.insert(10);   // duplicate — silently ignored, set remains unchanged
+
+for (int x : s) cout &lt;&lt; x &lt;&lt; " ";  // 10 20 30 — automatically sorted, ascending, no duplicates
+
+cout &lt;&lt; s.size();     // 3
+
+s.erase(20);              // removes the value 20 → {10, 30}
+
+cout &lt;&lt; s.count(10);        // 1 — exists
+cout &lt;&lt; s.count(99);          // 0 — doesn't exist (count is 0 or 1 for a set, since duplicates aren't allowed)
+
+auto it = s.find(30);            // returns an iterator to 30, or s.end() if not found
+if (it != s.end()) {
+    cout &lt;&lt; "Found: " &lt;&lt; *it;
+}</code></pre>
+
+  <h3>Why <code>find()</code> Is Preferred Over Iterating Manually</h3>
+  <p><code>set::find()</code> uses the underlying tree structure to search in O(log n) — this is drastically faster than a manual linear scan (O(n)), which is exactly the advantage a <code>set</code> offers over, say, a plain <code>vector</code> for membership testing.</p>
+
+  <h3><code>multiset</code> — Allows Duplicates</h3>
+  <pre><code class="language-cpp">#include &lt;set&gt;
+multiset&lt;int&gt; ms;
+ms.insert(10);
+ms.insert(10);   // allowed — duplicates ARE permitted in a multiset
+ms.insert(20);
+
+cout &lt;&lt; ms.count(10);  // 2
+
+ms.erase(10);              // WARNING: erases ALL occurrences of 10, not just one!
+// To erase only ONE occurrence:
+auto it = ms.find(10);
+if (it != ms.end()) ms.erase(it);  // erases just that single iterator's element</code></pre>
+
+  <h2>2. <code>std::map</code></h2>
+  <p>Stores <strong>key-value pairs</strong>, automatically sorted by key, with each key appearing exactly once (like a mathematical function — one key maps to exactly one value).</p>
+
+  <pre><code class="language-cpp">#include &lt;map&gt;
+using namespace std;
+
+map&lt;string, int&gt; ages;
+
+ages["Vinit"] = 22;         // insert or update via operator[]
+ages["Aman"] = 20;
+ages["Priya"] = 21;
+
+ages.insert({"Rahul", 23});   // alternative insertion syntax
+ages.insert(make_pair("Neha", 19));
+
+for (auto &amp;entry : ages) {
+    cout &lt;&lt; entry.first &lt;&lt; ": " &lt;&lt; entry.second &lt;&lt; endl;
+}
+// Automatically sorted BY KEY, alphabetically:
+// Aman: 20
+// Neha: 19
+// Priya: 21
+// Rahul: 23
+// Vinit: 22
+
+cout &lt;&lt; ages["Vinit"];       // 22
+cout &lt;&lt; ages.count("Aman");    // 1 — exists
+cout &lt;&lt; ages.count("XYZ");       // 0 — doesn't exist
+
+ages.erase("Priya");               // removes that key-value pair</code></pre>
+
+  <h3><strong>Critical gotcha — <code>operator[]</code> auto-inserts on read!</strong></h3>
+  <pre><code class="language-cpp">map&lt;string, int&gt; ages = {{"Vinit", 22}};
+
+cout &lt;&lt; ages["Unknown"];     // prints 0, but ALSO SILENTLY INSERTS "Unknown" → 0 into the map!
+cout &lt;&lt; ages.size();            // 2 now — "Unknown" was added as a side effect of merely READING it
+
+// This is one of the most common map-related interview traps.
+// SAFE way to check existence WITHOUT accidentally inserting:
+if (ages.find("Unknown") != ages.end()) {
+    cout &lt;&lt; "exists";
+} else {
+    cout &lt;&lt; "does not exist";  // this runs — and crucially, does NOT insert anything
+}
+
+// Or equivalently, using count() (also does not insert):
+if (ages.count("Unknown") &gt; 0) { /* exists */ }</code></pre>
+
+  <h3>Iterating and Modifying</h3>
+  <pre><code class="language-cpp">map&lt;string, int&gt; scores = {{"Vinit", 85}, {"Aman", 92}};
+
+for (auto &amp;entry : scores) {
+    entry.second += 5;  // can modify the VALUE through the reference (the key stays const)
+}
+
+for (auto &amp;entry : scores) {
+    cout &lt;&lt; entry.first &lt;&lt; ": " &lt;&lt; entry.second &lt;&lt; endl;
+}
+// Vinit: 90
+// Aman: 97</code></pre>
+
+  <h3><code>multimap</code> — Allows Duplicate Keys</h3>
+  <pre><code class="language-cpp">multimap&lt;string, int&gt; mm;
+mm.insert({"Vinit", 85});
+mm.insert({"Vinit", 90});  // allowed — same key can appear multiple times
+
+for (auto &amp;entry : mm) {
+    cout &lt;&lt; entry.first &lt;&lt; ": " &lt;&lt; entry.second &lt;&lt; endl;
+}
+// Vinit: 85
+// Vinit: 90
+// NOTE: multimap has NO operator[] — because a key can map to multiple values, [] wouldn't make sense</code></pre>
+
+  <h2>3. Common Patterns</h2>
+
+  <h3>Frequency counting with <code>map</code></h3>
+  <pre><code class="language-cpp">string s = "programming";
+map&lt;char, int&gt; freq;
+
+for (char c : s) {
+    freq[c]++;   // operator[]'s auto-insert behavior is actually USEFUL here:
+                    // if c isn't in the map yet, it's inserted with value 0, then incremented to 1
+}
+
+for (auto &amp;entry : freq) {
+    cout &lt;&lt; entry.first &lt;&lt; ": " &lt;&lt; entry.second &lt;&lt; endl;
+}</code></pre>
+
+  <h3>Checking for a value's presence before use</h3>
+  <pre><code class="language-cpp">set&lt;int&gt; seen;
+vector&lt;int&gt; nums = {1, 2, 2, 3, 1, 4};
+vector&lt;int&gt; unique;
+
+for (int n : nums) {
+    if (seen.find(n) == seen.end()) {   // not seen before
+        seen.insert(n);
+        unique.push_back(n);
+    }
+}
+// unique = {1, 2, 3, 4}</code></pre>
+
+  <h2>4. Ordered by Key — Range Queries with <code>lower_bound</code>/<code>upper_bound</code></h2>
+  <p>
+    Because <code>set</code>/<code>map</code> maintain sorted order internally, they support efficient range operations directly as member functions (distinct from the standalone <code>&lt;algorithm&gt;</code> versions covered in Module 4.7):
+  </p>
+  <pre><code class="language-cpp">set&lt;int&gt; s = {10, 20, 30, 40, 50};
+
+auto it1 = s.lower_bound(25);   // iterator to first element &gt;= 25 → points to 30
+auto it2 = s.upper_bound(30);     // iterator to first element &gt; 30 → points to 40
+
+cout &lt;&lt; *it1 &lt;&lt; " " &lt;&lt; *it2;        // 30 40</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Why does <code>map::operator[]</code> silently insert a default value when reading a non-existent key? What's the safe alternative for existence checks?</li>
+    <li>What is the difference between <code>set</code> and <code>multiset</code>? Give an example where <code>multiset::erase(value)</code> could unexpectedly remove more elements than intended.</li>
+    <li>Why does <code>multimap</code> not support <code>operator[]</code>?</li>
+    <li>What is the time complexity of <code>set::find()</code>, and what internal data structure makes this possible?</li>
+    <li>Explain why iterating over a <code>map</code> or <code>set</code> always produces elements in sorted order, without any explicit sort call.</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program that reads a sentence and uses a <code>map&lt;string, int&gt;</code> to count the frequency of each word, then prints words alphabetically with their counts.</li>
+    <li>Write a program that uses a <code>set</code> to remove duplicates from a vector while automatically sorting the result.</li>
+    <li>Write a program that checks whether two arrays share any common elements, using a <code>set</code> for O(n log n) lookup instead of a brute-force O(n²) comparison.</li>
+    <li>Write a program using a <code>map&lt;char,int&gt;</code> to check if two strings are anagrams of each other (compare frequency maps).</li>
+    <li>Write a program that uses <code>multimap&lt;int, string&gt;</code> to group student names by their grade/score, then prints all students grouped by score in ascending order.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

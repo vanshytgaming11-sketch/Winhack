@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 4.1 — Sequence Containers — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="sequence-containers">
+  <h1>Module 4.1 — Sequence Containers</h1>
+  <p>
+    Sequence containers store elements in a strict linear order, where each element's position is independent of its value (unlike associative containers, covered in 4.4/4.5, which order elements by key). The three most important sequence containers are <code>vector</code>, <code>deque</code>, and <code>list</code> — each with different internal storage strategies and performance trade-offs.
+  </p>
+
+  <h2>1. <code>std::vector</code></h2>
+  <p>
+    A dynamic array — contiguous memory that automatically resizes (grows) as elements are added. This is by far the most commonly used STL container, and usually the default choice unless a specific access pattern favors another container.
+  </p>
+
+  <h3>Declaration &amp; Initialization</h3>
+  <pre><code class="language-cpp">#include &lt;vector&gt;
+using namespace std;
+
+vector&lt;int&gt; v1;                     // empty vector
+vector&lt;int&gt; v2(5);                    // 5 elements, all default-initialized to 0
+vector&lt;int&gt; v3(5, 10);                  // 5 elements, all initialized to 10
+vector&lt;int&gt; v4 = {1, 2, 3, 4, 5};         // initializer list
+vector&lt;int&gt; v5(v4);                        // copy of v4
+vector&lt;vector&lt;int&gt;&gt; grid(3, vector&lt;int&gt;(4, 0)); // 3x4 2D grid, all zeros</code></pre>
+
+  <h3>Core Operations</h3>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {10, 20, 30};
+
+v.push_back(40);          // adds to the end → {10, 20, 30, 40}
+v.pop_back();               // removes from the end → {10, 20, 30}
+
+cout &lt;&lt; v[0];                  // 10 — no bounds checking (undefined behavior if out of range)
+cout &lt;&lt; v.at(0);                 // 10 — bounds-checked, throws std::out_of_range if invalid
+cout &lt;&lt; v.front();                 // 10 — first element
+cout &lt;&lt; v.back();                    // 30 — last element
+
+cout &lt;&lt; v.size();                       // 3 — current number of elements
+cout &lt;&lt; v.empty();                        // false (0)
+cout &lt;&lt; v.capacity();                       // internal allocated capacity (≥ size, implementation-dependent)
+
+v.insert(v.begin() + 1, 15);                   // insert 15 at index 1 → {10, 15, 20, 30}
+v.erase(v.begin() + 1);                           // remove element at index 1 → {10, 20, 30}
+v.clear();                                          // removes all elements → size 0
+
+vector&lt;int&gt; v2 = {1, 2, 3};
+v2.resize(5);                                          // → {1, 2, 3, 0, 0}
+v2.resize(2);                                            // → {1, 2} (truncates)</code></pre>
+
+  <h3>Traversal</h3>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {1, 2, 3, 4, 5};
+
+for (int i = 0; i &lt; v.size(); i++) cout &lt;&lt; v[i] &lt;&lt; " ";     // indexed
+for (int x : v) cout &lt;&lt; x &lt;&lt; " ";                              // range-based
+for (auto it = v.begin(); it != v.end(); it++) cout &lt;&lt; *it &lt;&lt; " "; // iterator-based (Module 4.6)</code></pre>
+
+  <h3>How <code>vector</code> Grows Internally (interview-critical, previewed here, full detail in 4.8)</h3>
+  <p>
+    When a <code>vector</code> exceeds its current capacity, it doesn't grow by one — it allocates a new, larger block (typically <strong>double</strong> the current capacity), copies/moves all existing elements into it, and frees the old block. This is why <code>push_back</code> has <strong>amortized O(1)</strong> time complexity: most calls are O(1), but occasionally one call costs O(n) to reallocate — averaged over many calls, the cost per call is still constant.
+  </p>
+  <pre><code class="language-cpp">vector&lt;int&gt; v;
+for (int i = 0; i &lt; 10; i++) {
+    v.push_back(i);
+    cout &lt;&lt; "size=" &lt;&lt; v.size() &lt;&lt; " capacity=" &lt;&lt; v.capacity() &lt;&lt; endl;
+}
+// Typical output pattern (exact growth factor is implementation-defined):
+// size=1 capacity=1
+// size=2 capacity=2
+// size=3 capacity=4
+// size=4 capacity=4
+// size=5 capacity=8
+// ... capacity roughly doubles each time it's exceeded</code></pre>
+  <p><strong>Reallocation invalidates iterators/pointers/references</strong> to existing elements — a very common bug source:</p>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {1, 2, 3};
+int *p = &amp;v[0];
+v.push_back(4);       // may trigger reallocation
+cout &lt;&lt; *p;              // UNDEFINED BEHAVIOR if reallocation occurred — p may point to freed memory</code></pre>
+  <p>If the final size is known in advance, use <code>v.reserve(n)</code> to pre-allocate capacity and avoid repeated reallocations:</p>
+  <pre><code class="language-cpp">vector&lt;int&gt; v;
+v.reserve(1000);   // allocates capacity for 1000 elements up front — subsequent push_backs won't reallocate
+for (int i = 0; i &lt; 1000; i++) v.push_back(i); // no reallocation occurs during this loop</code></pre>
+
+  <h2>2. <code>std::deque</code></h2>
+  <p>
+    Short for "double-ended queue," a <code>deque</code> supports efficient insertion and removal at <strong>both</strong> ends — unlike <code>vector</code>, which is only efficient at the back.
+  </p>
+  <pre><code class="language-cpp">#include &lt;deque&gt;
+using namespace std;
+
+deque&lt;int&gt; dq = {2, 3, 4};
+
+dq.push_back(5);      // → {2, 3, 4, 5}
+dq.push_front(1);       // → {1, 2, 3, 4, 5}  — O(1), unlike vector's O(n) for front insertion
+
+dq.pop_back();             // → {1, 2, 3, 4}
+dq.pop_front();               // → {2, 3, 4}
+
+cout &lt;&lt; dq[0] &lt;&lt; " " &lt;&lt; dq.front() &lt;&lt; " " &lt;&lt; dq.back(); // supports [] just like vector
+
+for (int x : dq) cout &lt;&lt; x &lt;&lt; " "; // range-based traversal works the same way</code></pre>
+  <p>
+    <strong>Internal structure:</strong> a <code>deque</code> is NOT one contiguous block like a <code>vector</code> — it's typically implemented as a sequence of fixed-size blocks (chunks), with an internal map (array of pointers) tracking those blocks. This is what allows O(1) insertion at both ends without shifting all existing elements, at the cost of slightly slower random access than <code>vector</code> (one extra level of indirection) and non-contiguous memory (bad for cache locality compared to vector).
+  </p>
+
+  <h3><code>vector</code> vs <code>deque</code> — When to Use Which</h3>
+  <table>
+    <thead>
+      <tr><th>Operation</th><th><code>vector</code></th><th><code>deque</code></th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Push/pop at back</td><td>O(1) amortized</td><td>O(1)</td></tr>
+      <tr><td>Push/pop at front</td><td>O(n) — must shift everything</td><td>O(1)</td></tr>
+      <tr><td>Random access <code>[i]</code></td><td>O(1), very fast (contiguous, cache-friendly)</td><td>O(1), but slightly slower (indirection)</td></tr>
+      <tr><td>Memory layout</td><td>Single contiguous block</td><td>Multiple non-contiguous blocks</td></tr>
+      <tr><td>Best for</td><td>Mostly back insertions, frequent random access</td><td>Insertions/removals at both ends (e.g., sliding window)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. <code>std::list</code></h2>
+  <p>
+    A doubly linked list — every element is a separately allocated node containing pointers to the previous and next nodes. Unlike <code>vector</code>/<code>deque</code>, elements are NOT stored contiguously or accessible by index at all.
+  </p>
+  <pre><code class="language-cpp">#include &lt;list&gt;
+using namespace std;
+
+list&lt;int&gt; l = {2, 3, 4};
+
+l.push_back(5);       // → {2, 3, 4, 5}
+l.push_front(1);        // → {1, 2, 3, 4, 5}
+
+l.pop_back();              // → {1, 2, 3, 4}
+l.pop_front();                // → {2, 3, 4}
+
+// l[0];    // COMPILE ERROR — list does NOT support random access / operator[]
+
+cout &lt;&lt; l.front() &lt;&lt; " " &lt;&lt; l.back(); // front/back still work — O(1)
+
+for (int x : l) cout &lt;&lt; x &lt;&lt; " ";       // range-based traversal — the ONLY practical way to iterate</code></pre>
+
+  <h3>Efficient Insertion/Removal Anywhere (list's key advantage)</h3>
+  <pre><code class="language-cpp">list&lt;int&gt; l = {1, 2, 4, 5};
+
+auto it = l.begin();
+advance(it, 2); // move iterator to point at the element '4' (index 2)
+
+l.insert(it, 3);   // insert 3 BEFORE the position it points to → {1, 2, 3, 4, 5}
+                      // this is O(1) once you HAVE the iterator — no shifting of other elements!
+
+l.erase(it);          // removes the element the iterator points to (4) → {1, 2, 3, 5}</code></pre>
+  <p>
+    This is <code>list</code>'s core advantage: once you have an iterator to a position, inserting or removing there is O(1) — no elements need to shift, because you're just relinking a few pointers. Compare this to <code>vector</code>, where inserting/removing in the middle is O(n) because all subsequent elements must shift over.
+  </p>
+
+  <h3><code>vector</code> vs <code>list</code> — When to Use Which</h3>
+  <table>
+    <thead>
+      <tr><th>Operation</th><th><code>vector</code></th><th><code>list</code></th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Random access <code>[i]</code></td><td>O(1)</td><td>Not supported — would require O(n) traversal</td></tr>
+      <tr><td>Insert/erase in the middle (given a position)</td><td>O(n) — must shift elements</td><td>O(1) — just relink pointers</td></tr>
+      <tr><td>Insert/erase at ends</td><td>O(1) amortized (back only)</td><td>O(1) (both ends)</td></tr>
+      <tr><td>Memory overhead</td><td>Minimal — just the elements</td><td>Higher — each node stores 2 extra pointers</td></tr>
+      <tr><td>Cache performance</td><td>Excellent (contiguous)</td><td>Poor (scattered nodes in memory)</td></tr>
+      <tr><td>Best for</td><td>Default choice; frequent random access</td><td>Frequent insertion/removal in the middle, rare random access</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Choosing the Right Sequence Container — Summary</h2>
+  <ul>
+    <li><strong>Default to <code>vector</code></strong> unless you have a specific reason not to — it's the most cache-friendly and generally fastest in practice for most workloads.</li>
+    <li>Use <strong><code>deque</code></strong> when you need efficient insertion/removal at both the front and back (e.g., implementing a sliding window, or a queue that also needs front access).</li>
+    <li>Use <strong><code>list</code></strong> only when you need frequent insertion/removal in the middle of the sequence AND rarely need random access — this is a fairly narrow use case in practice.</li>
+  </ul>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why <code>push_back</code> on a <code>vector</code> is described as "amortized O(1)" rather than simply "O(1)."</li>
+    <li>Why does a <code>vector</code> reallocation invalidate existing pointers/references/iterators, while a <code>list</code> insertion does not invalidate other elements' iterators?</li>
+    <li>Why can't <code>std::list</code> support <code>operator[]</code> the way <code>vector</code> and <code>deque</code> can?</li>
+    <li>Explain the internal structural difference between <code>vector</code> and <code>deque</code> that allows <code>deque</code> to support O(1) front insertion.</li>
+    <li>When would you choose <code>list</code> over <code>vector</code>? Give a concrete scenario.</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program that reads <code>n</code> integers into a <code>vector</code>, then removes all even numbers from it in place.</li>
+    <li>Write a program using a <code>deque</code> to simulate a simple browser history: <code>push_back</code> for visiting a new page, <code>pop_back</code> for going back, and <code>push_front</code>/<code>pop_front</code> to demonstrate front operations.</li>
+    <li>Write a program using <code>std::list</code> that inserts elements at specific positions using iterators, and removes all elements with a given value.</li>
+    <li>Write a program that demonstrates the difference in <code>capacity()</code> growth of a <code>vector</code> with and without calling <code>reserve()</code> beforehand, printing capacity after each <code>push_back</code> for both cases.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

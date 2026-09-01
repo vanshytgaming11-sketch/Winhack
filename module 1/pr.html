@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1.5 — Pointers &amp; References — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="pointers-references">
+  <h1>Module 1.5 — Pointers &amp; References</h1>
+  <p>
+    Pointers and references are two of the most important — and most heavily interview-tested — features of C++. They give direct control over memory, enable efficient parameter passing, and underpin how dynamic memory, arrays, and many data structures work internally.
+  </p>
+
+  <h2>1. What Is a Pointer?</h2>
+  <p>
+    A pointer is a variable that stores the <strong>memory address</strong> of another variable, rather than a value directly. Every variable in a running program lives at some address in memory; a pointer "points to" that address.
+  </p>
+
+  <pre><code class="language-cpp">int x = 10;
+int *p = &amp;x;   // p stores the ADDRESS of x
+
+cout &lt;&lt; x;      // 10 — the value of x
+cout &lt;&lt; &amp;x;      // some address like 0x7ffee3a1c8ac — address-of operator
+cout &lt;&lt; p;       // same address — p holds &amp;x
+cout &lt;&lt; *p;       // 10 — dereference operator, gives the value AT that address</code></pre>
+
+  <h3>Declaring Pointers</h3>
+  <pre><code class="language-cpp">int *p1;      // pointer to int
+double *p2;    // pointer to double
+char *p3;       // pointer to char
+
+// The * can be placed next to the type or the variable name — purely stylistic,
+// but be careful with multiple declarations on one line:
+int* a, b;     // a is a pointer to int, but b is just a PLAIN int (common trap!)
+int *a, *b;    // both a and b are pointers to int — safer style</code></pre>
+
+  <h2>2. Address-of (<code>&amp;</code>) and Dereference (<code>*</code>) Operators</h2>
+  <p>These two operators are central to pointer usage and are often confused because <code>&amp;</code> and <code>*</code> mean different things depending on context.</p>
+
+  <table>
+    <thead>
+      <tr><th>Operator</th><th>Context</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>&amp;</code></td><td>Before a variable, in an expression</td><td>"Address of" — gives the memory address of that variable</td></tr>
+      <tr><td><code>&amp;</code></td><td>In a type declaration, e.g. <code>int &amp;ref</code></td><td>Declares a reference (not related to address-of here)</td></tr>
+      <tr><td><code>*</code></td><td>In a declaration, e.g. <code>int *p</code></td><td>Declares <code>p</code> as a pointer to int</td></tr>
+      <tr><td><code>*</code></td><td>Before a pointer variable in an expression</td><td>"Dereference" — gives the value stored at the address the pointer holds</td></tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-cpp">int x = 5;
+int *p = &amp;x;
+
+*p = 20;          // Dereference and assign — modifies x directly (x is now 20)
+cout &lt;&lt; x;         // 20</code></pre>
+
+  <h2>3. Pointer Arithmetic</h2>
+  <p>
+    Pointer arithmetic doesn't move by raw bytes — it moves by <strong>units of the pointed-to type's size</strong>. Adding 1 to an <code>int*</code> advances the address by <code>sizeof(int)</code> bytes (typically 4), not by 1 byte.
+  </p>
+
+  <pre><code class="language-cpp">int arr[5] = {10, 20, 30, 40, 50};
+int *p = arr;         // arr decays to a pointer to arr[0]; p == &amp;arr[0]
+
+cout &lt;&lt; *p &lt;&lt; endl;      // 10
+cout &lt;&lt; *(p + 1) &lt;&lt; endl;  // 20 — moves forward by sizeof(int), lands on arr[1]
+cout &lt;&lt; *(p + 4) &lt;&lt; endl;   // 50 — arr[4]
+
+p++;                          // p now points to arr[1]
+cout &lt;&lt; *p &lt;&lt; endl;             // 20
+
+cout &lt;&lt; p - arr &lt;&lt; endl;         // 1 — pointer subtraction gives the number of ELEMENTS between them, not bytes</code></pre>
+
+  <p><strong>Array indexing is literally pointer arithmetic in disguise:</strong></p>
+  <pre><code class="language-cpp">arr[i]     // is exactly equivalent to
+*(arr + i)  // these two expressions are 100% interchangeable — a classic interview fact
+// Which also means, surprisingly, this compiles and works:
+i[arr]      // same as arr[i] — because *(arr + i) == *(i + arr)</code></pre>
+
+  <h2>4. `nullptr` and Uninitialized Pointers</h2>
+  <pre><code class="language-cpp">int *p;         // UNINITIALIZED — points to garbage memory, dangerous to dereference
+int *p = nullptr; // explicitly points to nothing (C++11+, preferred over C-style NULL)
+
+if (p == nullptr) {
+    cout &lt;&lt; "p points to nothing" &lt;&lt; endl;
+}
+
+int *q = NULL;     // legacy C-style null pointer — still works but nullptr is safer
+                     // (nullptr has its own type, NULL is often just 0 or (void*)0)</code></pre>
+  <p><strong>Interview tip:</strong> Always initialize pointers — either to a valid address or to <code>nullptr</code>. Dereferencing an uninitialized ("wild") pointer is undefined behavior and a very common source of crashes.</p>
+
+  <h2>5. References</h2>
+  <p>
+    A reference is an <strong>alias</strong> — an alternate name — for an already-existing variable. Unlike a pointer, it is not a separate object that stores an address; it directly refers to the same memory location as the original variable.
+  </p>
+
+  <pre><code class="language-cpp">int x = 10;
+int &amp;ref = x;    // ref is now another name for x
+
+cout &lt;&lt; ref;       // 10
+ref = 20;            // modifies x directly
+cout &lt;&lt; x;             // 20 — x changed too, because ref IS x
+
+int y = 30;
+ref = y;                // this does NOT rebind ref to y!
+                          // it copies y's VALUE into x (since ref still refers to x)
+cout &lt;&lt; x;                 // 30
+cout &lt;&lt; &amp;x &lt;&lt; " " &lt;&lt; &amp;ref;    // SAME address — proves ref and x are the same object</code></pre>
+
+  <h3>Rules for References</h3>
+  <ul>
+    <li>Must be initialized at the time of declaration — <code>int &amp;ref;</code> alone is a compile error.</li>
+    <li>Cannot be "null" — a reference must always refer to a valid object.</li>
+    <li>Cannot be reseated — once bound to a variable, it can never refer to a different variable afterward.</li>
+    <li>No separate memory representation is guaranteed by the standard (conceptually, no "reference object" exists — it's just another name).</li>
+  </ul>
+
+  <pre><code class="language-cpp">int &amp;ref;         // COMPILE ERROR — references must be initialized
+int &amp;ref = 5;       // COMPILE ERROR — can't bind non-const reference to a literal/temporary
+const int &amp;ref = 5;  // VALID — const reference CAN bind to a temporary (extends its lifetime)</code></pre>
+
+  <h2>6. Pointers vs References — The Classic Interview Comparison</h2>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>Pointer</th><th>Reference</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Can be null</td><td>Yes (<code>nullptr</code>)</td><td>No — must always refer to a valid object</td></tr>
+      <tr><td>Can be reassigned</td><td>Yes — can point to a different variable later</td><td>No — bound permanently at initialization</td></tr>
+      <tr><td>Needs initialization</td><td>No (dangerous, but legal to declare uninitialized)</td><td>Yes — mandatory at declaration</td></tr>
+      <tr><td>Syntax to access value</td><td>Requires dereference: <code>*p</code></td><td>Used directly, like the original variable: <code>ref</code></td></tr>
+      <tr><td>Supports arithmetic</td><td>Yes (<code>p++</code>, <code>p + 1</code>, etc.)</td><td>No — no arithmetic on references</td></tr>
+      <tr><td>Memory</td><td>Occupies its own memory (stores an address)</td><td>No separate storage — just an alias</td></tr>
+      <tr><td>Common use</td><td>Dynamic memory, data structures (linked lists, trees), optional "no value" semantics</td><td>Function parameters (avoid copies), operator overloading, range-based for loops</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. Pointers with Arrays</h2>
+  <p>Already previewed above, but formalized here — the deep relationship between arrays and pointers is a frequent interview topic.</p>
+
+  <pre><code class="language-cpp">int arr[5] = {1, 2, 3, 4, 5};
+int *p = arr;              // no &amp; needed — array name decays to pointer to first element
+
+// These are all equivalent ways to access arr[2]:
+cout &lt;&lt; arr[2];              // 3
+cout &lt;&lt; *(arr + 2);            // 3
+cout &lt;&lt; p[2];                    // 3
+cout &lt;&lt; *(p + 2);                  // 3</code></pre>
+
+  <p><strong>Key distinction — array vs pointer:</strong></p>
+  <pre><code class="language-cpp">int arr[5] = {1, 2, 3, 4, 5};
+int *p = arr;
+
+cout &lt;&lt; sizeof(arr);  // 20 — size of the WHOLE array (5 * 4 bytes)
+cout &lt;&lt; sizeof(p);      // 8 (on a 64-bit system) — size of a POINTER, regardless of what it points to
+
+// This is why sizeof(arr)/sizeof(arr[0]) only works on an actual array,
+// NOT on a pointer that merely points to the first element (a very common bug
+// when arrays are passed into functions — see below).</code></pre>
+
+  <h3>Arrays "decay" to pointers when passed to functions</h3>
+  <pre><code class="language-cpp">void printSize(int arr[]) {
+    cout &lt;&lt; sizeof(arr); // 8 — arr is actually just a POINTER here, not the real array!
+                            // This is a classic interview gotcha.
+}
+
+int main() {
+    int arr[5] = {1, 2, 3, 4, 5};
+    cout &lt;&lt; sizeof(arr);   // 20 — correct size, in the scope where arr is a real array
+    printSize(arr);           // but inside the function, it decays to int*, losing size info
+    return 0;
+}</code></pre>
+  <p>
+    This is exactly why array-processing functions in C++ typically require the size to be passed explicitly as a separate parameter — the array itself doesn't carry its length once it decays to a pointer.
+  </p>
+  <pre><code class="language-cpp">void printArray(int arr[], int size) {
+    for (int i = 0; i &lt; size; i++) {
+        cout &lt;&lt; arr[i] &lt;&lt; " ";
+    }
+}
+
+int main() {
+    int arr[5] = {1, 2, 3, 4, 5};
+    printArray(arr, 5);
+    return 0;
+}</code></pre>
+
+  <h2>8. Pointers to Pointers</h2>
+  <p>A pointer can itself point to another pointer — useful in scenarios like dynamic 2D arrays or modifying a pointer's value inside a function.</p>
+  <pre><code class="language-cpp">int x = 10;
+int *p = &amp;x;
+int **pp = &amp;p;    // pp holds the address of p
+
+cout &lt;&lt; x;          // 10
+cout &lt;&lt; *p;           // 10
+cout &lt;&lt; **pp;           // 10 — double dereference</code></pre>
+
+  <h2>9. Dynamic Memory (preview — full depth in Module 2.1)</h2>
+  <p>
+    So far, all variables have been on the <strong>stack</strong> — automatically allocated and deallocated as functions enter/exit. Pointers also enable <strong>heap</strong> allocation, where memory persists until explicitly freed. This is fully covered in Module 2.1, but the basic syntax:
+  </p>
+  <pre><code class="language-cpp">int *p = new int;       // allocates a single int on the heap
+*p = 42;
+cout &lt;&lt; *p;               // 42
+delete p;                   // MUST manually free heap memory — no automatic cleanup
+
+int *arr = new int[5];        // allocates an array of 5 ints on the heap
+delete[] arr;                   // must use delete[] for arrays, not delete</code></pre>
+  <p>Forgetting <code>delete</code> causes a <strong>memory leak</strong> — memory that stays reserved for the program's entire lifetime even though it's no longer needed. This entire topic (stack vs heap, leaks, dangling pointers) is explored in full depth next module.</p>
+
+  <h2>10. Passing Pointers and References to Functions (recap &amp; extension)</h2>
+  <p>This connects directly back to Module 1.3 — here's the fuller picture with pointers included:</p>
+
+  <pre><code class="language-cpp">void modifyByPointer(int *p) {
+    *p = 100;
+}
+
+void modifyByReference(int &amp;r) {
+    r = 200;
+}
+
+int main() {
+    int a = 5, b = 5;
+
+    modifyByPointer(&amp;a);   // must pass address explicitly
+    modifyByReference(b);    // pass variable directly, no &amp; needed at call site
+
+    cout &lt;&lt; a &lt;&lt; " " &lt;&lt; b;     // 100 200
+    return 0;
+}</code></pre>
+
+  <p><strong>Why prefer references over pointers for function parameters (when nullability isn't needed):</strong> Cleaner call-site syntax (no <code>&amp;</code>/<code>*</code> juggling), and references can't be null, so you don't need to defensively check for that inside the function.</p>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain the difference between the <code>&amp;</code> operator used in a declaration versus used in an expression.</li>
+    <li>Why does <code>p + 1</code> on an <code>int*</code> advance the address by 4 bytes rather than 1 byte? What determines this step size?</li>
+    <li>List at least four differences between pointers and references. When would you strictly need a pointer instead of a reference?</li>
+    <li>Explain why <code>int* a, b;</code> does NOT declare two pointers, and how to fix it.</li>
+    <li>Why does <code>sizeof(arr)</code> give a different result inside a function that receives the array as a parameter, compared to the scope where the array was originally declared?</li>
+  </ol>
+
+  <h3>Predict the Output</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">int arr[4] = {5, 10, 15, 20};
+int *p = arr;
+cout &lt;&lt; *(p + 2) &lt;&lt; " " &lt;&lt; p[3] &lt;&lt; " " &lt;&lt; 2[arr];</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">int x = 10;
+int &amp;ref = x;
+int y = 20;
+ref = y;
+cout &lt;&lt; x &lt;&lt; " " &lt;&lt; y &lt;&lt; " " &lt;&lt; (&amp;x == &amp;ref);</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">int x = 5;
+int *p = &amp;x;
+int **pp = &amp;p;
+**pp = 50;
+cout &lt;&lt; x;</code></pre>
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function <code>void swap(int *a, int *b)</code> that swaps two integers using pointers (not references).</li>
+    <li>Write a program that uses pointer arithmetic (not array indexing syntax) to print all elements of an array and compute their sum.</li>
+    <li>Write a function <code>int* findMax(int arr[], int size)</code> that returns a pointer to the largest element in the array, then dereference it in <code>main()</code> to print the value.</li>
+    <li>Write a program demonstrating the difference between a pointer and a reference: create both pointing/referring to the same variable, reassign the pointer to a different variable, and attempt to explain (in a comment) why the same cannot be done with the reference.</li>
+    <li>Write a function that takes an array and its size, and reverses the array in place using two pointers moving from opposite ends toward the middle.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Certificate exam — WinHack</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="exam-page">
+  <div id="examError" class="exam-error" hidden>
+    <div>
+      <h2>Window change detected</h2>
+      <p></p>
+      <button type="button" class="btn" id="dismissError">I understand</button>
+    </div>
+  </div>
+
+  <section class="exam-shell" id="examGate">
+    <p class="eyebrow">Fullscreen exam</p>
+    <h1>WinHack certificate test</h1>
+    <p>20 multiple-choice questions covering the full C++ + DSA course. You need more than 15 correct (16 or higher). The exam fills the entire screen. Leaving, minimizing, or switching windows is a violation and ends the attempt. Each email may take this test only once per week.</p>
+    <ul class="exam-rules">
+      <li>Stay in fullscreen until you submit.</li>
+      <li>Answer all 20 questions. There is no partial certificate.</li>
+      <li>Do not switch tabs, apps, or windows.</li>
+      <li>A failed or abandoned attempt still counts for the weekly lock.</li>
+    </ul>
+    <label class="exam-field">Name
+      <input id="examName" type="text" autocomplete="name" placeholder="Your full name">
+    </label>
+    <label class="exam-field">Email
+      <input id="examEmail" type="email" autocomplete="email" placeholder="you@example.com">
+    </label>
+    <p id="gateMsg" class="gate-msg"></p>
+    <button type="button" class="btn" id="startExam">Enter fullscreen and start</button>
+    <p><a href="certificate.html">Back</a></p>
+  </section>
+
+  <section class="exam-shell exam-stage" id="examStage" hidden>
+    <div class="exam-progress" id="examProgress" aria-hidden="true"><span></span></div>
+    <header class="exam-top">
+      <strong>WinHack</strong>
+      <span id="qIndex"></span>
+      <span id="answeredMeta"></span>
+    </header>
+    <h2 id="qText"></h2>
+    <div id="qOptions" class="exam-options"></div>
+    <div class="exam-actions">
+      <button type="button" class="btn btn-ghost" id="prevBtn">Previous</button>
+      <button type="button" class="btn" id="nextBtn">Next</button>
+      <button type="button" class="btn" id="submitBtn" hidden>Submit test</button>
+    </div>
+  </section>
+
+  <section class="exam-shell" id="examResult" hidden>
+    <h1 id="resultTitle"></h1>
+    <p id="resultBody"></p>
+    <div class="btn-row">
+      <a class="btn" id="viewCertBtn" hidden href="cert.html">View certificate</a>
+      <button type="button" class="btn btn-ghost" id="homeBtn">Home</button>
+    </div>
+  </section>
+
+  <script src="progress.js"></script>
+  <script src="exam.js"></script>
+</body>
+</html>

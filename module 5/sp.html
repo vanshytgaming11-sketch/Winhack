@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 5.3 — Smart Pointers — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="smart-pointers">
+  <h1>Module 5.3 — Smart Pointers</h1>
+  <p>
+    Modules 2.1 and 3.2 established the recurring dangers of raw <code>new</code>/<code>delete</code>: memory leaks, dangling pointers, double-frees, and resources leaked when an exception is thrown mid-function. Smart pointers solve all of these by wrapping a raw pointer inside a class that automatically manages its lifetime using RAII (Module 2.2) — the memory is freed automatically when the smart pointer goes out of scope, no matter how the function exits.
+  </p>
+
+  <h2>1. Why Smart Pointers — The Problem Restated</h2>
+  <pre><code class="language-cpp">void riskyFunction() {
+    int *p = new int(42);
+    doSomethingThatMightThrow();  // if this throws, delete p below is NEVER reached — LEAK
+    delete p;
+}</code></pre>
+  <p>Smart pointers eliminate this entire bug class by tying deallocation to the object's own destructor, which C++ guarantees runs during stack unwinding (Module 3.2) — regardless of whether the function returns normally or an exception propagates through it.</p>
+
+  <h2>2. <code>std::unique_ptr</code> — Exclusive Ownership</h2>
+  <p>
+    A <code>unique_ptr</code> represents <strong>sole, exclusive</strong> ownership of a dynamically allocated object. Exactly one <code>unique_ptr</code> can own a given object at a time — it cannot be copied, only <strong>moved</strong> (Module 5.4). When it goes out of scope, it automatically deletes the object it owns.
+  </p>
+  <pre><code class="language-cpp">#include &lt;memory&gt;
+using namespace std;
+
+void demo() {
+    unique_ptr&lt;int&gt; p = make_unique&lt;int&gt;(42);   // preferred way to create one (C++14+)
+    cout &lt;&lt; *p;                                    // 42 — dereference just like a raw pointer
+
+    // No delete needed — p's destructor automatically frees the memory
+    // when demo() returns, EVEN IF an exception is thrown before this point
+}</code></pre>
+
+  <h3>Cannot Be Copied — Only Moved</h3>
+  <pre><code class="language-cpp">unique_ptr&lt;int&gt; p1 = make_unique&lt;int&gt;(10);
+// unique_ptr&lt;int&gt; p2 = p1;         // COMPILE ERROR — copy constructor is deleted; ownership must be UNIQUE
+
+unique_ptr&lt;int&gt; p2 = move(p1);        // OK — transfers ownership from p1 to p2
+cout &lt;&lt; (p1 == nullptr);                 // true — p1 no longer owns anything after the move
+cout &lt;&lt; *p2;                                // 10 — p2 now owns it</code></pre>
+  <p>This compile-time enforcement is the entire point: it's structurally impossible to accidentally have two owners of the same <code>unique_ptr</code>-managed memory, which eliminates double-free bugs by design.</p>
+
+  <h3>Using <code>unique_ptr</code> with Arrays and Custom Classes</h3>
+  <pre><code class="language-cpp">unique_ptr&lt;int[]&gt; arr = make_unique&lt;int[]&gt;(5);  // dynamically allocated array, auto-freed with delete[]
+arr[0] = 10;
+arr[1] = 20;
+
+class Student {
+    public:
+        string name;
+        Student(string n) : name(n) { cout &lt;&lt; name &lt;&lt; " created" &lt;&lt; endl; }
+        ~Student() { cout &lt;&lt; name &lt;&lt; " destroyed" &lt;&lt; endl; }
+};
+
+unique_ptr&lt;Student&gt; s = make_unique&lt;Student&gt;("Vinit");
+cout &lt;&lt; s-&gt;name;   // -&gt; works just like a raw pointer, for accessing members
+// "Vinit destroyed" prints automatically when s goes out of scope</code></pre>
+
+  <h3>Passing <code>unique_ptr</code> to Functions</h3>
+  <pre><code class="language-cpp">void takeOwnership(unique_ptr&lt;int&gt; p) {   // by value — takes ownership, caller loses it
+    cout &lt;&lt; *p;
+}   // p is destroyed here, memory freed
+
+void justUse(const unique_ptr&lt;int&gt; &amp;p) {   // by const reference — caller RETAINS ownership
+    cout &lt;&lt; *p;
+}
+
+int main() {
+    unique_ptr&lt;int&gt; p = make_unique&lt;int&gt;(42);
+    justUse(p);                                 // p is still valid afterward
+    takeOwnership(move(p));                        // MUST explicitly move — p is now null afterward
+    cout &lt;&lt; (p == nullptr);                            // true
+    return 0;
+}</code></pre>
+
+  <h2>3. <code>std::shared_ptr</code> — Shared Ownership</h2>
+  <p>
+    A <code>shared_ptr</code> allows <strong>multiple</strong> pointers to jointly own the same object, using internal <strong>reference counting</strong> — the object is only deleted once the LAST <code>shared_ptr</code> owning it is destroyed or reset.
+  </p>
+  <pre><code class="language-cpp">#include &lt;memory&gt;
+using namespace std;
+
+void demo() {
+    shared_ptr&lt;int&gt; p1 = make_shared&lt;int&gt;(42);
+    cout &lt;&lt; p1.use_count();     // 1 — one owner
+
+    {
+        shared_ptr&lt;int&gt; p2 = p1;    // COPY is allowed — both now share ownership
+        cout &lt;&lt; p1.use_count();       // 2 — reference count incremented
+        cout &lt;&lt; *p2;                     // 42
+    } // p2 goes out of scope here — reference count decrements back to 1, memory NOT freed yet
+
+    cout &lt;&lt; p1.use_count();     // 1 — back down, p1 still owns it
+} // p1 goes out of scope — reference count hits 0 — memory IS finally freed here</code></pre>
+
+  <h3>How Reference Counting Works</h3>
+  <p>
+    Internally, a <code>shared_ptr</code> maintains a shared "control block" (allocated once, shared by all copies) tracking the current reference count. Every time a <code>shared_ptr</code> is copied, the count increments; every time one is destroyed or reset, the count decrements. When the count reaches zero, the managed object is deleted automatically.
+  </p>
+  <pre><code class="language-cpp">shared_ptr&lt;int&gt; p1 = make_shared&lt;int&gt;(100);
+shared_ptr&lt;int&gt; p2 = p1;
+shared_ptr&lt;int&gt; p3 = p2;
+
+cout &lt;&lt; p1.use_count();   // 3 — all three share ownership of the SAME object
+
+p2.reset();                   // p2 releases its ownership — count drops to 2
+cout &lt;&lt; p1.use_count();          // 2</code></pre>
+
+  <h2>4. The Circular Reference Problem</h2>
+  <p>
+    <code>shared_ptr</code> has one significant pitfall: if two objects hold <code>shared_ptr</code>s to each other, their reference counts never reach zero — even if nothing else in the program references them — causing a memory leak despite using "smart" pointers.
+  </p>
+  <pre><code class="language-cpp">class B; // forward declaration
+
+class A {
+    public:
+        shared_ptr&lt;B&gt; bPtr;
+        ~A() { cout &lt;&lt; "A destroyed" &lt;&lt; endl; }
+};
+
+class B {
+    public:
+        shared_ptr&lt;A&gt; aPtr;
+        ~B() { cout &lt;&lt; "B destroyed" &lt;&lt; endl; }
+};
+
+int main() {
+    shared_ptr&lt;A&gt; a = make_shared&lt;A&gt;();
+    shared_ptr&lt;B&gt; b = make_shared&lt;B&gt;();
+    a-&gt;bPtr = b;    // A holds a shared_ptr to B
+    b-&gt;aPtr = a;      // B holds a shared_ptr to A — CIRCULAR REFERENCE
+
+    return 0;
+    // Neither "A destroyed" nor "B destroyed" ever prints!
+    // a's use_count is 2 (main's `a` + b's `aPtr`), b's use_count is 2 (main's `b` + a's `bPtr`)
+    // Even though main()'s local a and b go out of scope, each object still has ONE remaining
+    // reference from the OTHER object — neither count ever reaches zero. LEAKED.
+}</code></pre>
+
+  <h2>5. <code>std::weak_ptr</code> — Breaking Circular References</h2>
+  <p>
+    A <code>weak_ptr</code> is a non-owning observer of an object managed by a <code>shared_ptr</code> — it does NOT increment the reference count, so it doesn't keep the object alive by itself. This is exactly the tool used to break circular reference cycles.
+  </p>
+  <pre><code class="language-cpp">class B; // forward declaration
+
+class A {
+    public:
+        shared_ptr&lt;B&gt; bPtr;
+        ~A() { cout &lt;&lt; "A destroyed" &lt;&lt; endl; }
+};
+
+class B {
+    public:
+        weak_ptr&lt;A&gt; aPtr;    // CHANGED to weak_ptr — does not contribute to A's reference count
+        ~B() { cout &lt;&lt; "B destroyed" &lt;&lt; endl; }
+};
+
+int main() {
+    shared_ptr&lt;A&gt; a = make_shared&lt;A&gt;();
+    shared_ptr&lt;B&gt; b = make_shared&lt;B&gt;();
+    a-&gt;bPtr = b;
+    b-&gt;aPtr = a;    // weak_ptr assignment — does NOT increase A's use_count
+
+    return 0;
+    // Now BOTH destructors run correctly:
+    // "A destroyed"
+    // "B destroyed"
+    // Because a's use_count correctly reaches 0 once main()'s `a` and A::bPtr chain are gone —
+    // B's weak reference to A never counted toward keeping A alive.
+}</code></pre>
+
+  <h3>Using a <code>weak_ptr</code>'s Value — <code>.lock()</code></h3>
+  <p>
+    Since the object a <code>weak_ptr</code> observes might already be destroyed, you can't dereference it directly — you must call <code>.lock()</code>, which returns a temporary <code>shared_ptr</code> (or an empty one if the object no longer exists):
+  </p>
+  <pre><code class="language-cpp">shared_ptr&lt;int&gt; sp = make_shared&lt;int&gt;(42);
+weak_ptr&lt;int&gt; wp = sp;
+
+if (shared_ptr&lt;int&gt; locked = wp.lock()) {   // succeeds — sp is still alive
+    cout &lt;&lt; *locked;                            // 42
+}
+
+sp.reset();   // the only shared_ptr owner releases the object — it's now destroyed
+
+if (shared_ptr&lt;int&gt; locked = wp.lock()) {
+    cout &lt;&lt; *locked;
+} else {
+    cout &lt;&lt; "Object no longer exists" &lt;&lt; endl;   // this runs — wp correctly detects the object is gone
+}</code></pre>
+
+  <h2>6. RAII — The Underlying Principle (formal recap)</h2>
+  <p>
+    Smart pointers are a direct, general-purpose application of the RAII pattern first introduced in Module 2.2: "Resource Acquisition Is Initialization" — a resource (here, heap memory) is acquired in a constructor and automatically released in a destructor, tying its lifetime directly to a scope. This is precisely why smart pointers require no manual cleanup and remain safe even when exceptions are thrown mid-function.
+  </p>
+
+  <h2>7. Ownership Model — When to Use Which</h2>
+  <table>
+    <thead>
+      <tr><th>Smart pointer</th><th>Ownership model</th><th>Use when</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>unique_ptr</code></td><td>Exclusive — exactly one owner</td><td><strong>Default choice.</strong> Use unless you specifically need shared ownership</td></tr>
+      <tr><td><code>shared_ptr</code></td><td>Shared — multiple owners, reference-counted</td><td>Multiple parts of code genuinely need to jointly own/extend an object's lifetime</td></tr>
+      <tr><td><code>weak_ptr</code></td><td>Non-owning observer</td><td>Breaking circular <code>shared_ptr</code> references; observing an object without extending its lifetime</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Modern C++ guideline:</strong> avoid raw <code>new</code>/<code>delete</code> in application code entirely — default to <code>unique_ptr</code>, and reach for <code>shared_ptr</code> only when genuine shared ownership is required.</p>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why <code>unique_ptr</code> cannot be copied, only moved, and how this design choice prevents double-free bugs by construction.</li>
+    <li>Describe how <code>shared_ptr</code>'s reference counting mechanism determines when to actually delete the managed object.</li>
+    <li>Explain, step by step, why two objects holding <code>shared_ptr</code>s to each other causes a memory leak, and how introducing a <code>weak_ptr</code> on one side fixes it.</li>
+    <li>Why can't you dereference a <code>weak_ptr</code> directly — what must you call first, and why?</li>
+    <li>How do smart pointers relate to the RAII pattern introduced in Module 2.2?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Rewrite the <code>IntArray</code> class from Module 2.3 (which manually managed a raw <code>int*</code>) to use a <code>unique_ptr&lt;int[]&gt;</code> instead, eliminating the need for a custom destructor.</li>
+    <li>Write a program that creates a <code>shared_ptr&lt;Student&gt;</code>, shares it across three different function calls (each taking it by value, incrementing the reference count), and prints <code>use_count()</code> at each stage.</li>
+    <li>Write a small program deliberately demonstrating a circular reference leak between two classes using <code>shared_ptr</code> (showing destructors never print), then fix it using <code>weak_ptr</code> and show the destructors now print correctly.</li>
+    <li>Write a function that takes a <code>unique_ptr&lt;int&gt;</code> by value (taking ownership) and demonstrate the correct use of <code>std::move</code> when calling it from <code>main()</code>.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

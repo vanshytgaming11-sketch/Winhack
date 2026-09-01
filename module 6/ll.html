@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.3 — Linked Lists — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="linked-lists">
+  <h1>Module 6.3 — Linked Lists</h1>
+  <p>
+    While <code>std::list</code> (Module 4.1) provides a ready-made doubly linked list, interviews almost always ask you to implement and manipulate linked list logic manually — usually singly linked, using raw pointer-based nodes — to test your understanding of pointer manipulation directly.
+  </p>
+
+  <h2>1. Node Structure</h2>
+  <pre><code class="language-cpp">struct ListNode {
+    int val;
+    ListNode *next;
+    ListNode(int v) : val(v), next(nullptr) {}
+};
+
+// Building a small list manually: 1 -&gt; 2 -&gt; 3 -&gt; nullptr
+ListNode *head = new ListNode(1);
+head-&gt;next = new ListNode(2);
+head-&gt;next-&gt;next = new ListNode(3);
+// head-&gt;next-&gt;next-&gt;next is implicitly nullptr — this is how a linked list "ends"</code></pre>
+
+  <h2>2. Singly vs Doubly Linked Lists</h2>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>Singly linked</th><th>Doubly linked</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Pointers per node</td><td>One (<code>next</code>)</td><td>Two (<code>next</code> and <code>prev</code>)</td></tr>
+      <tr><td>Traversal direction</td><td>Forward only</td><td>Both directions</td></tr>
+      <tr><td>Memory per node</td><td>Less</td><td>More (extra pointer)</td></tr>
+      <tr><td>Deleting a given node directly</td><td>Requires the PREVIOUS node's pointer (must track it during traversal)</td><td>Easy — the node itself has <code>prev</code></td></tr>
+    </tbody>
+  </table>
+  <pre><code class="language-cpp">struct DoublyListNode {
+    int val;
+    DoublyListNode *next;
+    DoublyListNode *prev;
+    DoublyListNode(int v) : val(v), next(nullptr), prev(nullptr) {}
+};</code></pre>
+
+  <h2>3. Basic Traversal</h2>
+  <pre><code class="language-cpp">void printList(ListNode *head) {
+    ListNode *curr = head;
+    while (curr != nullptr) {
+        cout &lt;&lt; curr-&gt;val &lt;&lt; " -&gt; ";
+        curr = curr-&gt;next;
+    }
+    cout &lt;&lt; "nullptr" &lt;&lt; endl;
+}
+// O(n) time, O(1) space</code></pre>
+
+  <h2>4. Fast &amp; Slow Pointers (Floyd's Technique)</h2>
+  <p>
+    The single most important linked-list-specific pattern: two pointers traverse the list at different speeds (typically <code>slow</code> moves 1 step, <code>fast</code> moves 2 steps per iteration). This solves problems that would otherwise require knowing the list's length in advance.
+  </p>
+
+  <h3>Finding the Middle Node</h3>
+  <pre><code class="language-cpp">ListNode* findMiddle(ListNode *head) {
+    ListNode *slow = head, *fast = head;
+    while (fast != nullptr &amp;&amp; fast-&gt;next != nullptr) {
+        slow = slow-&gt;next;         // moves 1 step
+        fast = fast-&gt;next-&gt;next;     // moves 2 steps
+    }
+    return slow;   // when fast reaches the end, slow is exactly at the middle
+}
+// O(n) time, O(1) space — no need to first count the list's length in a separate pass</code></pre>
+
+  <h3>Cycle Detection (Floyd's Cycle Detection / "Tortoise and Hare")</h3>
+  <pre><code class="language-cpp">bool hasCycle(ListNode *head) {
+    ListNode *slow = head, *fast = head;
+    while (fast != nullptr &amp;&amp; fast-&gt;next != nullptr) {
+        slow = slow-&gt;next;
+        fast = fast-&gt;next-&gt;next;
+        if (slow == fast) return true;   // they meet — a cycle exists
+    }
+    return false;   // fast reached nullptr — no cycle
+}
+// O(n) time, O(1) space — no extra memory needed (compare to a hash-set-of-visited-nodes approach, which is O(n) space)</code></pre>
+  <p><strong>Why they're guaranteed to meet if a cycle exists:</strong> once both pointers enter the cycle, <code>fast</code> gains on <code>slow</code> by exactly one node per iteration (since it moves 2 steps to <code>slow</code>'s 1) — so it must eventually "lap" <code>slow</code> and land on the exact same node, within at most one full cycle length of iterations.</p>
+
+  <h3>Finding the Start of the Cycle (extension)</h3>
+  <pre><code class="language-cpp">ListNode* detectCycleStart(ListNode *head) {
+    ListNode *slow = head, *fast = head;
+
+    // Phase 1: detect if a cycle exists (as above)
+    while (fast != nullptr &amp;&amp; fast-&gt;next != nullptr) {
+        slow = slow-&gt;next;
+        fast = fast-&gt;next-&gt;next;
+        if (slow == fast) break;
+    }
+
+    if (fast == nullptr || fast-&gt;next == nullptr) return nullptr;   // no cycle
+
+    // Phase 2: reset one pointer to head, then move BOTH one step at a time — they meet at the cycle's start
+    slow = head;
+    while (slow != fast) {
+        slow = slow-&gt;next;
+        fast = fast-&gt;next;
+    }
+    return slow;   // this is the node where the cycle begins
+}
+// This works due to the mathematical relationship between the distance to the cycle start
+// and the cycle's length — a well-known but non-obvious proof, worth knowing exists even
+// if you don't derive it from scratch in an interview.</code></pre>
+
+  <h2>5. Reversing a Linked List</h2>
+  <p>One of the most frequently asked linked list problems — reverses the direction of every <code>next</code> pointer.</p>
+  <pre><code class="language-cpp">ListNode* reverseList(ListNode *head) {
+    ListNode *prev = nullptr;
+    ListNode *curr = head;
+
+    while (curr != nullptr) {
+        ListNode *nextTemp = curr-&gt;next;   // save the next node BEFORE overwriting curr-&gt;next
+        curr-&gt;next = prev;                    // reverse the pointer
+        prev = curr;                             // advance prev
+        curr = nextTemp;                            // advance curr using the saved reference
+    }
+    return prev;   // prev is now the new head (was the last node before reversal)
+}
+// O(n) time, O(1) space — reverses in place, no new nodes allocated</code></pre>
+
+  <h3>Tracing Through It — 1→2→3→nullptr</h3>
+  <pre><code>Initial:   prev=null  curr=1  (1-&gt;2-&gt;3-&gt;null)
+
+Step 1: nextTemp=2, 1-&gt;next=null, prev=1, curr=2
+        State: null&lt;-1   2-&gt;3-&gt;null
+
+Step 2: nextTemp=3, 2-&gt;next=1, prev=2, curr=3
+        State: null&lt;-1&lt;-2   3-&gt;null
+
+Step 3: nextTemp=null, 3-&gt;next=2, prev=3, curr=null
+        State: null&lt;-1&lt;-2&lt;-3
+
+Loop ends (curr==null). Return prev (=3) as the new head: 3-&gt;2-&gt;1-&gt;null</code></pre>
+
+  <h3>Recursive Reversal (alternative approach)</h3>
+  <pre><code class="language-cpp">ListNode* reverseListRecursive(ListNode *head) {
+    if (head == nullptr || head-&gt;next == nullptr) return head;   // base case — 0 or 1 node
+
+    ListNode *newHead = reverseListRecursive(head-&gt;next);   // reverse everything AFTER head first
+
+    head-&gt;next-&gt;next = head;   // make the node AFTER head point back to head
+    head-&gt;next = nullptr;         // head becomes the new tail — must point to nullptr
+
+    return newHead;   // the new head is established at the deepest base case, passed back up unchanged
+}
+// O(n) time, O(n) space (due to the recursive call stack) — worse space complexity than
+// the iterative version, but often considered more elegant/easier to reason about</code></pre>
+
+  <h2>6. Common Node-Manipulation Operations</h2>
+
+  <h3>Inserting a node</h3>
+  <pre><code class="language-cpp">void insertAtBeginning(ListNode *&amp;head, int val) {   // note: reference to the pointer, to modify head itself
+    ListNode *newNode = new ListNode(val);
+    newNode-&gt;next = head;
+    head = newNode;
+}
+
+void insertAfter(ListNode *node, int val) {
+    ListNode *newNode = new ListNode(val);
+    newNode-&gt;next = node-&gt;next;
+    node-&gt;next = newNode;
+}</code></pre>
+
+  <h3>Deleting a node (given the node itself, not the head)</h3>
+  <pre><code class="language-cpp">void deleteNode(ListNode *prev, ListNode *toDelete) {
+    prev-&gt;next = toDelete-&gt;next;
+    delete toDelete;   // manually managing memory — this is why smart pointers (Module 5.3) are often used
+                          // in production linked list implementations to avoid manual delete calls
+}</code></pre>
+
+  <h2>7. Merging Two Sorted Lists</h2>
+  <pre><code class="language-cpp">ListNode* mergeTwoLists(ListNode *l1, ListNode *l2) {
+    ListNode dummy(0);           // a DUMMY node simplifies edge cases — avoids special-casing an empty result list
+    ListNode *tail = &amp;dummy;
+
+    while (l1 != nullptr &amp;&amp; l2 != nullptr) {
+        if (l1-&gt;val &lt;= l2-&gt;val) {
+            tail-&gt;next = l1;
+            l1 = l1-&gt;next;
+        } else {
+            tail-&gt;next = l2;
+            l2 = l2-&gt;next;
+        }
+        tail = tail-&gt;next;
+    }
+
+    tail-&gt;next = (l1 != nullptr) ? l1 : l2;   // attach whichever list still has remaining nodes
+
+    return dummy.next;   // dummy.next is the actual head of the merged list
+}
+// O(n + m) time, O(1) extra space (reuses existing nodes, no new allocation)</code></pre>
+  <p><strong>The dummy node trick:</strong> this is a widely used idiom for simplifying linked list code — instead of special-casing "what if the result list starts empty," you always start with a placeholder dummy node and return <code>dummy.next</code> at the end.</p>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why the fast/slow pointer technique correctly finds the middle of a list in a single pass, without knowing the list's length beforehand.</li>
+    <li>Why are fast and slow pointers mathematically guaranteed to meet if a cycle exists?</li>
+    <li>Explain, step by step, why <code>nextTemp</code> must be saved BEFORE reassigning <code>curr-&gt;next</code> in the iterative reversal function.</li>
+    <li>Why does the recursive reversal have O(n) space complexity while the iterative version has O(1)?</li>
+    <li>What problem does the "dummy node" idiom solve, and why does it simplify the merge-two-lists implementation?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function to detect a cycle in a linked list AND return its length if one exists (hint: once slow and fast meet, keep one pointer moving and count steps until it returns to the meeting point).</li>
+    <li>Write a function that removes the Nth node from the end of a linked list in a SINGLE pass, using two pointers with a fixed gap.</li>
+    <li>Write a function to check whether a linked list is a palindrome, using the fast/slow pointer technique to find the middle, then reversing the second half for comparison.</li>
+    <li>Write a function to remove all duplicate values from an UNSORTED linked list, using a <code>set</code> to track values seen so far.</li>
+    <li>Write a function to reorder a linked list <code>L0→L1→...→Ln</code> into <code>L0→Ln→L1→Ln-1→...</code> (find middle, reverse second half, merge alternately).</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

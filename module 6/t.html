@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.6 — Trees — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="trees">
+  <h1>Module 6.6 — Trees</h1>
+  <p>
+    A tree is a hierarchical, non-linear data structure consisting of nodes connected by edges, with exactly one root and no cycles. Binary trees — where each node has at most two children — are by far the most heavily tested tree structure in interviews, and recursion (Module 1.3) is almost always the natural way to process them.
+  </p>
+
+  <h2>1. Binary Tree — Node Structure</h2>
+  <pre><code class="language-cpp">struct TreeNode {
+    int val;
+    TreeNode *left;
+    TreeNode *right;
+    TreeNode(int v) : val(v), left(nullptr), right(nullptr) {}
+};
+
+//         1
+//        / \
+//       2   3
+//      / \
+//     4   5
+TreeNode *root = new TreeNode(1);
+root-&gt;left = new TreeNode(2);
+root-&gt;right = new TreeNode(3);
+root-&gt;left-&gt;left = new TreeNode(4);
+root-&gt;left-&gt;right = new TreeNode(5);</code></pre>
+
+  <h2>2. Tree Terminology</h2>
+  <table>
+    <thead>
+      <tr><th>Term</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Root</td><td>The topmost node — has no parent</td></tr>
+      <tr><td>Leaf</td><td>A node with no children</td></tr>
+      <tr><td>Height</td><td>Longest path from a node down to a leaf (number of edges)</td></tr>
+      <tr><td>Depth</td><td>Distance from the root to a given node (number of edges)</td></tr>
+      <tr><td>Subtree</td><td>A node together with all of its descendants</td></tr>
+      <tr><td>Balanced</td><td>The height difference between any node's left and right subtrees is at most 1</td></tr>
+      <tr><td>Complete</td><td>Every level is fully filled except possibly the last, which fills left to right</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. Tree Traversals — Depth-First (DFS)</h2>
+  <p>Three DFS orderings differ only in WHEN the current node is visited relative to its children — all are O(n) time, O(h) space (h = tree height, due to the recursive call stack).</p>
+
+  <h3>Inorder (Left → Node → Right)</h3>
+  <pre><code class="language-cpp">void inorder(TreeNode *root) {
+    if (root == nullptr) return;
+    inorder(root-&gt;left);
+    cout &lt;&lt; root-&gt;val &lt;&lt; " ";
+    inorder(root-&gt;right);
+}
+// For the tree above: 4 2 5 1 3
+// CRITICAL property: inorder traversal of a BST always produces SORTED order (Module 6.6 section 6)</code></pre>
+
+  <h3>Preorder (Node → Left → Right)</h3>
+  <pre><code class="language-cpp">void preorder(TreeNode *root) {
+    if (root == nullptr) return;
+    cout &lt;&lt; root-&gt;val &lt;&lt; " ";
+    preorder(root-&gt;left);
+    preorder(root-&gt;right);
+}
+// Output: 1 2 4 5 3
+// Common use: serializing a tree's structure (the root always comes before its children)</code></pre>
+
+  <h3>Postorder (Left → Right → Node)</h3>
+  <pre><code class="language-cpp">void postorder(TreeNode *root) {
+    if (root == nullptr) return;
+    postorder(root-&gt;left);
+    postorder(root-&gt;right);
+    cout &lt;&lt; root-&gt;val &lt;&lt; " ";
+}
+// Output: 4 5 2 3 1
+// Common use: deleting a tree safely (children must be freed BEFORE their parent),
+// or evaluating an expression tree (operands before the operator)</code></pre>
+
+  <h3>Iterative DFS (using an explicit stack — avoiding recursion)</h3>
+  <pre><code class="language-cpp">void preorderIterative(TreeNode *root) {
+    if (root == nullptr) return;
+    stack&lt;TreeNode*&gt; st;
+    st.push(root);
+
+    while (!st.empty()) {
+        TreeNode *curr = st.top();
+        st.pop();
+        cout &lt;&lt; curr-&gt;val &lt;&lt; " ";
+
+        // Push RIGHT first so LEFT is processed first (stack is LIFO)
+        if (curr-&gt;right) st.push(curr-&gt;right);
+        if (curr-&gt;left) st.push(curr-&gt;left);
+    }
+}
+// This directly mirrors what the recursive call stack does implicitly —
+// exactly connecting back to Module 1.3's discussion of recursion vs iteration</code></pre>
+
+  <h2>4. Tree Traversal — Breadth-First (BFS / Level-Order)</h2>
+  <p>Visits nodes level by level, using a <code>queue</code> (Module 4.3) rather than a stack — this is the tree-specific application of the queue-based BFS previewed in Module 6.4.</p>
+  <pre><code class="language-cpp">void levelOrder(TreeNode *root) {
+    if (root == nullptr) return;
+    queue&lt;TreeNode*&gt; q;
+    q.push(root);
+
+    while (!q.empty()) {
+        TreeNode *curr = q.front();
+        q.pop();
+        cout &lt;&lt; curr-&gt;val &lt;&lt; " ";
+
+        if (curr-&gt;left) q.push(curr-&gt;left);
+        if (curr-&gt;right) q.push(curr-&gt;right);
+    }
+}
+// Output: 1 2 3 4 5
+// O(n) time, O(w) space, where w = the tree's maximum width (widest level)</code></pre>
+
+  <h3>Level-Order with Level Separation (common variant)</h3>
+  <pre><code class="language-cpp">vector&lt;vector&lt;int&gt;&gt; levelOrderGrouped(TreeNode *root) {
+    vector&lt;vector&lt;int&gt;&gt; result;
+    if (root == nullptr) return result;
+    queue&lt;TreeNode*&gt; q;
+    q.push(root);
+
+    while (!q.empty()) {
+        int levelSize = q.size();   // snapshot the CURRENT level's size before processing
+        vector&lt;int&gt; level;
+
+        for (int i = 0; i &lt; levelSize; i++) {
+            TreeNode *curr = q.front();
+            q.pop();
+            level.push_back(curr-&gt;val);
+
+            if (curr-&gt;left) q.push(curr-&gt;left);
+            if (curr-&gt;right) q.push(curr-&gt;right);
+        }
+        result.push_back(level);
+    }
+    return result;
+}
+// Output for the example tree: {{1}, {2,3}, {4,5}}
+// The trick: capture q.size() BEFORE the inner loop, since new children get pushed
+// DURING the loop and would otherwise incorrectly be counted as part of the current level</code></pre>
+
+  <h2>5. Recursion Patterns on Trees</h2>
+  <p>Most tree problems follow one of a few recursive templates — recognizing which applies is often the key interview insight.</p>
+
+  <h3>Pattern A — Compute a value bottom-up from children</h3>
+  <pre><code class="language-cpp">int height(TreeNode *root) {
+    if (root == nullptr) return -1;   // convention: height of an empty tree is -1 (or 0, depending on definition)
+    return 1 + max(height(root-&gt;left), height(root-&gt;right));
+}
+// O(n) time — visits every node exactly once
+// O(h) space — recursive call stack depth equals the tree's height</code></pre>
+
+  <pre><code class="language-cpp">int countNodes(TreeNode *root) {
+    if (root == nullptr) return 0;
+    return 1 + countNodes(root-&gt;left) + countNodes(root-&gt;right);
+}</code></pre>
+
+  <h3>Pattern B — Check a property recursively, combining results from children</h3>
+  <pre><code class="language-cpp">bool isBalanced(TreeNode *root) {
+    return checkHeight(root) != -1;   // helper returns -1 as a sentinel meaning "already unbalanced"
+}
+
+int checkHeight(TreeNode *root) {
+    if (root == nullptr) return 0;
+
+    int leftHeight = checkHeight(root-&gt;left);
+    if (leftHeight == -1) return -1;   // propagate the "unbalanced" signal up immediately
+
+    int rightHeight = checkHeight(root-&gt;right);
+    if (rightHeight == -1) return -1;
+
+    if (abs(leftHeight - rightHeight) &gt; 1) return -1;   // THIS node violates balance
+
+    return 1 + max(leftHeight, rightHeight);
+}
+// O(n) time — this combined approach avoids the O(n²) naive version that would
+// recompute height() separately at every single node</code></pre>
+
+  <h3>Pattern C — Path-based problems (passing state DOWN through parameters)</h3>
+  <pre><code class="language-cpp">bool hasPathSum(TreeNode *root, int targetSum) {
+    if (root == nullptr) return false;
+
+    if (root-&gt;left == nullptr &amp;&amp; root-&gt;right == nullptr) {   // leaf node
+        return targetSum == root-&gt;val;
+    }
+
+    int remaining = targetSum - root-&gt;val;
+    return hasPathSum(root-&gt;left, remaining) || hasPathSum(root-&gt;right, remaining);
+}
+// The "remaining target" is passed DOWN the recursion — a common technique for
+// path-sum-style problems, distinct from Pattern A's bottom-up value computation</code></pre>
+
+  <h2>6. Binary Search Trees (BST)</h2>
+  <p>
+    A BST is a binary tree with an ordering invariant: for every node, all values in its LEFT subtree are smaller, and all values in its RIGHT subtree are larger. This invariant is exactly what makes inorder traversal produce sorted output (as noted in section 3), and what enables O(h) search/insert/delete.
+  </p>
+
+  <h3>BST Search</h3>
+  <pre><code class="language-cpp">TreeNode* searchBST(TreeNode *root, int target) {
+    if (root == nullptr || root-&gt;val == target) return root;
+    if (target &lt; root-&gt;val) return searchBST(root-&gt;left, target);
+    return searchBST(root-&gt;right, target);
+}
+// O(h) time — where h is the tree's height. For a BALANCED BST, h = O(log n).
+// For a DEGENERATE (essentially linked-list-shaped) BST, h = O(n) — same worst case as Module 4.8's
+// discussion of unbalanced BSTs, which is exactly why std::map uses a SELF-BALANCING tree internally.</code></pre>
+
+  <h3>BST Insertion</h3>
+  <pre><code class="language-cpp">TreeNode* insertBST(TreeNode *root, int val) {
+    if (root == nullptr) return new TreeNode(val);
+
+    if (val &lt; root-&gt;val) {
+        root-&gt;left = insertBST(root-&gt;left, val);
+    } else {
+        root-&gt;right = insertBST(root-&gt;right, val);
+    }
+    return root;
+}
+// O(h) time — traverses down to find the correct empty spot, following the BST invariant at each step</code></pre>
+
+  <h3>Validating a BST (common interview trap)</h3>
+  <pre><code class="language-cpp">bool isValidBST(TreeNode *root, long minVal = LONG_MIN, long maxVal = LONG_MAX) {
+    if (root == nullptr) return true;
+
+    if (root-&gt;val &lt;= minVal || root-&gt;val &gt;= maxVal) return false;
+
+    return isValidBST(root-&gt;left, minVal, root-&gt;val) &amp;&amp;
+           isValidBST(root-&gt;right, root-&gt;val, maxVal);
+}
+// COMMON BUG: checking only `root-&gt;left-&gt;val &lt; root-&gt;val &lt; root-&gt;right-&gt;val` at EACH node
+// individually is WRONG — it misses violations further down the tree. The valid range must be
+// PASSED DOWN and narrowed at every level, since a BST's invariant applies to the ENTIRE subtree,
+// not just immediate children.</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why inorder traversal of a BST always produces values in sorted order, referencing the BST invariant.</li>
+    <li>Why does level-order traversal require capturing <code>q.size()</code> before the inner loop when grouping nodes by level?</li>
+    <li>Explain the bug in checking only immediate children's values when validating a BST, and why the min/max range must be passed down recursively.</li>
+    <li>What is the time complexity of BST search/insert in the best case (balanced) versus worst case (degenerate)? Why does this connect back to Module 4.8's discussion of <code>set</code>/<code>map</code>?</li>
+    <li>Explain the difference between the three DFS orderings (preorder, inorder, postorder) and give a practical use case for each.</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function to find the lowest common ancestor (LCA) of two nodes in a BST, using the BST property to avoid a full traversal.</li>
+    <li>Write a function to serialize a binary tree to a string (preorder with null markers) and deserialize it back into a tree.</li>
+    <li>Write a function to check if two binary trees are structurally identical (same shape and same values at every node).</li>
+    <li>Write a function to find the diameter of a binary tree (the longest path between any two nodes, not necessarily through the root) in O(n), combining Pattern A and Pattern B above.</li>
+    <li>Write a function to convert a sorted array into a height-balanced BST.</li>
+    <li>Write a function to find the K-th smallest element in a BST using inorder traversal, stopping early once the K-th element is reached.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

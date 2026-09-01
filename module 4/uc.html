@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 4.5 — Unordered Associative Containers — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="unordered-associative">
+  <h1>Module 4.5 — Unordered Associative Containers</h1>
+  <p>
+    <code>unordered_set</code> and <code>unordered_map</code> provide the same key-based interface as <code>set</code>/<code>map</code>, but are implemented using a <strong>hash table</strong> instead of a balanced tree. This trades away sorted ordering for significantly faster average-case performance — O(1) average instead of O(log n).
+  </p>
+
+  <h2>1. <code>std::unordered_set</code></h2>
+  <pre><code class="language-cpp">#include &lt;unordered_set&gt;
+using namespace std;
+
+unordered_set&lt;int&gt; us;
+
+us.insert(30);
+us.insert(10);
+us.insert(20);
+us.insert(10);   // duplicate — ignored, just like set
+
+for (int x : us) cout &lt;&lt; x &lt;&lt; " ";  // order is UNSPECIFIED — could print in any order,
+                                          // NOT guaranteed to be 10 20 30 like std::set would be
+
+cout &lt;&lt; us.count(20);   // 1
+us.erase(20);
+
+auto it = us.find(30);
+if (it != us.end()) cout &lt;&lt; "Found: " &lt;&lt; *it;</code></pre>
+
+  <h2>2. <code>std::unordered_map</code></h2>
+  <pre><code class="language-cpp">#include &lt;unordered_map&gt;
+using namespace std;
+
+unordered_map&lt;string, int&gt; ages;
+
+ages["Vinit"] = 22;
+ages["Aman"] = 20;
+ages.insert({"Priya", 21});
+
+for (auto &amp;entry : ages) {
+    cout &lt;&lt; entry.first &lt;&lt; ": " &lt;&lt; entry.second &lt;&lt; endl;
+    // order is UNSPECIFIED — do not rely on any particular sequence
+}
+
+cout &lt;&lt; ages["Vinit"];         // 22 — same auto-insert-on-read gotcha as std::map applies here too!
+cout &lt;&lt; ages.count("Aman");      // 1</code></pre>
+
+  <h2>3. <code>map</code>/<code>set</code> vs <code>unordered_map</code>/<code>unordered_set</code> — The Critical Interview Comparison</h2>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th><code>map</code> / <code>set</code></th><th><code>unordered_map</code> / <code>unordered_set</code></th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Internal structure</td><td>Self-balancing BST (Red-Black Tree)</td><td>Hash table</td></tr>
+      <tr><td>Ordering</td><td>Always sorted by key</td><td>Unspecified / arbitrary</td></tr>
+      <tr><td>Average time complexity</td><td>O(log n) for insert/find/erase</td><td>O(1) for insert/find/erase</td></tr>
+      <tr><td>Worst-case time complexity</td><td>O(log n) — guaranteed, always balanced</td><td>O(n) — if many keys collide into the same bucket</td></tr>
+      <tr><td>Memory overhead</td><td>Tree node pointers (typically 3 per node)</td><td>Hash table buckets, generally comparable or higher</td></tr>
+      <tr><td>Requires</td><td>Keys must support <code>&lt;</code> (or a custom comparator)</td><td>Keys must support <code>==</code> and have a hash function</td></tr>
+      <tr><td>Use when</td><td>You need sorted iteration, or range queries (<code>lower_bound</code> etc.)</td><td>You only care about existence/lookup speed, order doesn't matter</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Why Worst-Case O(n) Can Happen (Hash Collisions)</h2>
+  <p>
+    A hash table works by computing a hash of the key and using it to determine which "bucket" to store the element in. If many different keys happen to hash to the <em>same</em> bucket (a collision), that bucket internally degrades toward a linked list, and operations on it become O(bucket size) rather than O(1). With a well-designed hash function and a reasonable load factor, this is rare in practice — but it's why the standard guarantees only O(1) <em>average</em>, not O(1) worst-case.
+  </p>
+  <pre><code class="language-cpp">unordered_map&lt;int, int&gt; m;
+cout &lt;&lt; m.load_factor();     // average number of elements per bucket
+cout &lt;&lt; m.bucket_count();      // current number of buckets
+m.rehash(100);                    // manually request at least 100 buckets — reduces collision likelihood</code></pre>
+
+  <h2>5. Custom Types as Keys</h2>
+  <p>
+    <code>set</code>/<code>map</code> only require the key type to support <code>operator&lt;</code> (which most built-in types and <code>std::string</code> already do). <code>unordered_set</code>/<code>unordered_map</code> require both a hash function (<code>std::hash&lt;T&gt;</code>) and an equality check (<code>operator==</code>) — this is why using a custom struct/class as a key in an unordered container requires extra setup that ordered containers don't:
+  </p>
+  <pre><code class="language-cpp">struct Point {
+    int x, y;
+    bool operator==(const Point &amp;other) const {
+        return x == other.x &amp;&amp; y == other.y;
+    }
+};
+
+// Must provide a custom hash specialization for unordered_set/unordered_map to work with Point:
+struct PointHash {
+    size_t operator()(const Point &amp;p) const {
+        return hash&lt;int&gt;()(p.x) ^ (hash&lt;int&gt;()(p.y) &lt;&lt; 1);
+    }
+};
+
+unordered_set&lt;Point, PointHash&gt; points;
+points.insert({1, 2});
+points.insert({3, 4});</code></pre>
+  <p>
+    For a <code>std::set&lt;Point&gt;</code> instead, you'd only need to define <code>operator&lt;</code> on <code>Point</code> — a simpler requirement, which is one reason ordered containers are sometimes preferred for custom types despite the performance trade-off.
+  </p>
+
+  <h2>6. When to Choose Which</h2>
+  <ul>
+    <li><strong>Default to <code>unordered_map</code>/<code>unordered_set</code></strong> when you only need fast lookups/insertions and don't care about order — this covers the vast majority of DSA interview problems (frequency counting, seen-before checks, deduplication).</li>
+    <li><strong>Use <code>map</code>/<code>set</code></strong> when you need sorted iteration, range queries (<code>lower_bound</code>/<code>upper_bound</code>), or predictable worst-case guarantees (important in real-time/latency-sensitive systems where an occasional O(n) hash collision spike would be unacceptable).</li>
+  </ul>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain the core structural difference between <code>map</code> and <code>unordered_map</code> that leads to their different time complexities.</li>
+    <li>Why does <code>unordered_map</code> have O(1) <em>average</em> but O(n) <em>worst-case</em> complexity? What causes the worst case?</li>
+    <li>Why can't you directly use a custom struct as a key in an <code>unordered_set</code> without extra work, while a <code>set</code> only needs <code>operator&lt;</code> defined?</li>
+    <li>Give two concrete scenarios: one where <code>unordered_map</code> is clearly the better choice, and one where <code>map</code> is clearly better, with reasoning.</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program that uses <code>unordered_set</code> to check for duplicate elements in an array in O(n) average time.</li>
+    <li>Write a program that uses <code>unordered_map&lt;int,int&gt;</code> to solve the "two sum" problem: given an array and a target, find two indices whose values sum to the target, in a single pass.</li>
+    <li>Write a program that counts word frequency in a paragraph using <code>unordered_map&lt;string,int&gt;</code>, then separately prints the same result sorted alphabetically (requiring a copy into a <code>map</code> or a sort step) — to demonstrate the ordering trade-off directly.</li>
+    <li>Write a program defining a custom <code>struct Employee {int id; string name;}</code> with a custom hash function, and demonstrate storing/looking up <code>Employee</code> objects in an <code>unordered_set</code>.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

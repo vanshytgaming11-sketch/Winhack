@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 3.2 — Exception Handling — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="exception-handling">
+  <h1>Module 3.2 — Exception Handling</h1>
+  <p>
+    Exception handling is a mechanism for detecting and responding to runtime errors in a controlled way, separating error-detection code from error-handling code. Instead of a function failing silently or crashing the whole program, it can <em>throw</em> an exception that gets <em>caught</em> and handled at an appropriate point up the call stack.
+  </p>
+
+  <h2>1. <code>try</code>, <code>throw</code>, <code>catch</code></h2>
+  <pre><code class="language-cpp">int divide(int a, int b) {
+    if (b == 0) {
+        throw runtime_error("Division by zero!"); // throws an exception object
+    }
+    return a / b;
+}
+
+int main() {
+    try {
+        int result = divide(10, 0);   // this line throws
+        cout &lt;&lt; result;                 // never reached — control jumps straight to catch
+    } catch (const runtime_error &amp;e) {
+        cout &lt;&lt; "Caught exception: " &lt;&lt; e.what() &lt;&lt; endl;
+    }
+    cout &lt;&lt; "Program continues normally" &lt;&lt; endl;
+    return 0;
+}
+// Output:
+// Caught exception: Division by zero!
+// Program continues normally</code></pre>
+
+  <p><strong>How it works:</strong></p>
+  <ul>
+    <li><code>try</code> — wraps code that might throw an exception.</li>
+    <li><code>throw</code> — signals that an error occurred, and "throws" an exception object (any type — a string, an int, a custom class, or a standard exception type).</li>
+    <li><code>catch</code> — catches and handles an exception of a matching type, thrown anywhere within the corresponding <code>try</code> block (including inside functions called from it).</li>
+  </ul>
+  <p>When an exception is thrown, normal execution stops immediately at that point, and control jumps directly to the nearest matching <code>catch</code> block — skipping all remaining code in the <code>try</code> block and any intermediate function calls (this unwinding process is called <strong>stack unwinding</strong>).</p>
+
+  <h2>2. Standard Exception Types</h2>
+  <p>
+    C++ provides a hierarchy of standard exception classes in <code>&lt;stdexcept&gt;</code>, all deriving from <code>std::exception</code>. Using these (rather than throwing raw strings/ints) is best practice, since they all support a uniform <code>.what()</code> method describing the error.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Exception type</th><th>Typical use</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>std::runtime_error</code></td><td>Errors detectable only at runtime (e.g., invalid input, external failure)</td></tr>
+      <tr><td><code>std::logic_error</code></td><td>Errors from flawed program logic (theoretically preventable)</td></tr>
+      <tr><td><code>std::invalid_argument</code></td><td>An argument doesn't meet expected criteria</td></tr>
+      <tr><td><code>std::out_of_range</code></td><td>Accessing an index/element outside valid bounds (e.g., thrown by <code>vector::at()</code>, <code>string::at()</code>)</td></tr>
+      <tr><td><code>std::bad_alloc</code></td><td>Thrown automatically by <code>new</code> when memory allocation fails</td></tr>
+      <tr><td><code>std::exception</code></td><td>Base class of all standard exceptions — can catch anything derived from it</td></tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-cpp">#include &lt;stdexcept&gt;
+using namespace std;
+
+int main() {
+    vector&lt;int&gt; v = {1, 2, 3};
+    try {
+        cout &lt;&lt; v.at(10);   // out of bounds — .at() throws, unlike v[10] which is undefined behavior
+    } catch (const out_of_range &amp;e) {
+        cout &lt;&lt; "Error: " &lt;&lt; e.what() &lt;&lt; endl;
+    }
+    return 0;
+}</code></pre>
+
+  <h2>3. Multiple <code>catch</code> Blocks</h2>
+  <p>A single <code>try</code> block can be followed by multiple <code>catch</code> blocks, each handling a different exception type. They're checked top to bottom, and only the first matching one executes.</p>
+
+  <pre><code class="language-cpp">void process(int code) {
+    if (code == 1) throw invalid_argument("Invalid input");
+    if (code == 2) throw out_of_range("Value out of range");
+    if (code == 3) throw runtime_error("General runtime error");
+    throw 42; // throwing a plain int — also legal, though not best practice
+}
+
+int main() {
+    for (int i = 1; i &lt;= 4; i++) {
+        try {
+            process(i);
+        } catch (const invalid_argument &amp;e) {
+            cout &lt;&lt; "Invalid argument: " &lt;&lt; e.what() &lt;&lt; endl;
+        } catch (const out_of_range &amp;e) {
+            cout &lt;&lt; "Out of range: " &lt;&lt; e.what() &lt;&lt; endl;
+        } catch (const runtime_error &amp;e) {
+            cout &lt;&lt; "Runtime error: " &lt;&lt; e.what() &lt;&lt; endl;
+        } catch (int code) {
+            cout &lt;&lt; "Caught raw int: " &lt;&lt; code &lt;&lt; endl;
+        }
+    }
+    return 0;
+}</code></pre>
+
+  <h3>Catch-All Handler — <code>catch (...)</code></h3>
+  <pre><code class="language-cpp">try {
+    // risky code
+} catch (const exception &amp;e) {
+    cout &lt;&lt; "Standard exception: " &lt;&lt; e.what() &lt;&lt; endl;
+} catch (...) {     // catches literally ANYTHING not matched above
+    cout &lt;&lt; "Unknown exception caught" &lt;&lt; endl;
+}</code></pre>
+  <p><code>catch (...)</code> doesn't give you access to the exception's value/type — it's a last-resort safety net, often used at a program's outermost boundary to guarantee nothing escapes unhandled.</p>
+
+  <h3>Ordering Matters — Catch Derived Before Base</h3>
+  <pre><code class="language-cpp">try {
+    throw out_of_range("test");
+} catch (const exception &amp;e) {         // out_of_range IS-A exception — matches FIRST if placed first
+    cout &lt;&lt; "Generic: " &lt;&lt; e.what();
+} catch (const out_of_range &amp;e) {        // UNREACHABLE — the base class catch above already caught it!
+    cout &lt;&lt; "Specific: " &lt;&lt; e.what();
+}
+// Always order catch blocks from MOST specific (derived) to LEAST specific (base) —
+// otherwise a base-class catch silently swallows exceptions meant for a more specific handler.</code></pre>
+
+  <h2>4. Custom Exception Classes</h2>
+  <p>For domain-specific errors, define your own exception class, typically deriving from <code>std::exception</code> (or a more specific standard type):</p>
+  <pre><code class="language-cpp">class InsufficientFundsException : public exception {
+    private:
+        string message;
+    public:
+        InsufficientFundsException(string msg) : message(msg) {}
+
+        const char* what() const noexcept override {   // must match this exact signature
+            return message.c_str();
+        }
+};
+
+class BankAccount {
+    private:
+        double balance;
+    public:
+        BankAccount(double b) : balance(b) {}
+
+        void withdraw(double amount) {
+            if (amount &gt; balance) {
+                throw InsufficientFundsException("Withdrawal exceeds available balance");
+            }
+            balance -= amount;
+        }
+};
+
+int main() {
+    BankAccount acc(500);
+    try {
+        acc.withdraw(1000);
+    } catch (const InsufficientFundsException &amp;e) {
+        cout &lt;&lt; "Error: " &lt;&lt; e.what() &lt;&lt; endl;
+    }
+    return 0;
+}</code></pre>
+
+  <h2>5. Stack Unwinding and Destructors</h2>
+  <p>
+    When an exception propagates up through function calls, all local objects in scopes it passes through are properly destructed (their destructors run) before the exception reaches its <code>catch</code> block — ensuring resources like memory or file handles are cleaned up correctly, provided your classes follow RAII (Module 2.2, formalized fully in Module 5.3).
+  </p>
+  <pre><code class="language-cpp">class Logger {
+    public:
+        Logger() { cout &lt;&lt; "Logger created" &lt;&lt; endl; }
+        ~Logger() { cout &lt;&lt; "Logger destroyed" &lt;&lt; endl; }
+};
+
+void risky() {
+    Logger log;                     // local object
+    throw runtime_error("Oops");     // exception thrown — but log's destructor STILL runs during unwinding
+}
+
+int main() {
+    try {
+        risky();
+    } catch (const exception &amp;e) {
+        cout &lt;&lt; "Caught: " &lt;&lt; e.what() &lt;&lt; endl;
+    }
+    return 0;
+}
+// Output:
+// Logger created
+// Logger destroyed   ← runs automatically during stack unwinding, BEFORE the catch block executes
+// Caught: Oops</code></pre>
+
+  <h2>6. The Danger of Raw Pointers with Exceptions</h2>
+  <pre><code class="language-cpp">void risky() {
+    int *data = new int[100];
+    throw runtime_error("Oops");     // exception thrown BEFORE delete[] data; runs!
+    delete[] data;                     // this line is NEVER REACHED — memory leak
+}</code></pre>
+  <p>This is precisely why modern C++ strongly prefers smart pointers (Module 5.3) over raw <code>new</code>/<code>delete</code> — a smart pointer's destructor runs automatically during stack unwinding (just like <code>Logger</code> above), safely freeing memory even when an exception is thrown mid-function.</p>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain what happens, step by step, when an exception is thrown inside a function called from within a <code>try</code> block.</li>
+    <li>Why must <code>catch</code> blocks for derived exception types be placed before <code>catch</code> blocks for their base types?</li>
+    <li>What is stack unwinding, and why does it matter for objects that own resources (like dynamically allocated memory)?</li>
+    <li>Why is throwing a raw <code>int</code> or C-string generally discouraged compared to throwing a standard exception type?</li>
+    <li>What signature must a custom exception class's <code>what()</code> override exactly match, and why?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function <code>double safeDivide(double a, double b)</code> that throws a <code>runtime_error</code> if <code>b == 0</code>, and demonstrate catching it in <code>main()</code>.</li>
+    <li>Write a custom exception class <code>NegativeValueException</code> and use it inside a function that computes a square root, throwing it if the input is negative.</li>
+    <li>Write a program with a <code>try</code> block containing multiple risky operations (array access, division, type conversion) and multiple <code>catch</code> blocks handling <code>out_of_range</code>, <code>runtime_error</code>, and a generic <code>catch(...)</code> fallback.</li>
+    <li>Write a class <code>Resource</code> whose constructor prints "acquired" and destructor prints "released". Demonstrate that its destructor runs correctly even when an exception is thrown after the object is created but before the function returns normally.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

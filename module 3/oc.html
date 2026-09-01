@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 3.7 — Other Concepts — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="other-concepts">
+  <h1>Module 3.7 — Other Concepts</h1>
+  <p>
+    This module consolidates a few remaining foundational ideas — deeper uses of <code>const</code>, a full recap of <code>static</code> across all its contexts, and a summary of memory-related concepts that tie together everything covered so far in Modules 1–3.
+  </p>
+
+  <h2>1. <code>const</code> — The Full Picture</h2>
+  <p>Module 1.1 introduced <code>const</code> for simple variables. Here's every context where <code>const</code> appears in C++, since interviewers frequently probe multiple forms in one question.</p>
+
+  <h3><code>const</code> Variables (recap)</h3>
+  <pre><code class="language-cpp">const int MAX = 100;   // cannot be reassigned after initialization</code></pre>
+
+  <h3><code>const</code> Pointers — Four Distinct Meanings</h3>
+  <p>This is one of the trickiest and most frequently tested pointer topics:</p>
+  <pre><code class="language-cpp">int x = 10, y = 20;
+
+int *p1 = &amp;x;                     // plain pointer — both pointer and pointee are mutable
+*p1 = 15;                            // OK — can modify the value
+p1 = &amp;y;                               // OK — can repoint
+
+const int *p2 = &amp;x;                 // pointer to CONST int — pointee is read-only THROUGH this pointer
+// *p2 = 15;                            // COMPILE ERROR — cannot modify *p2
+p2 = &amp;y;                                // OK — can still repoint p2 itself
+
+int *const p3 = &amp;x;                  // CONST pointer to int — pointer itself cannot be reseated
+*p3 = 15;                               // OK — can still modify the pointee
+// p3 = &amp;y;                               // COMPILE ERROR — cannot repoint a const pointer
+
+const int *const p4 = &amp;x;               // CONST pointer to CONST int — neither can change
+// *p4 = 15;                                // COMPILE ERROR
+// p4 = &amp;y;                                   // COMPILE ERROR</code></pre>
+
+  <p><strong>Reading trick (right-to-left from the variable name):</strong> read the declaration starting at the variable name and moving outward/leftward.</p>
+  <table>
+    <thead>
+      <tr><th>Declaration</th><th>Read as</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>const int *p</code></td><td>"p is a pointer to a const int" — pointee is const</td></tr>
+      <tr><td><code>int *const p</code></td><td>"p is a const pointer to int" — pointer itself is const</td></tr>
+      <tr><td><code>const int *const p</code></td><td>"p is a const pointer to a const int" — both are const</td></tr>
+    </tbody>
+  </table>
+  <p>Note: <code>const int *p</code> and <code>int const *p</code> are exactly equivalent — the <code>const</code> can be written on either side of the type it modifies.</p>
+
+  <h3><code>const</code> with Function Parameters (recap from Module 1.3)</h3>
+  <pre><code class="language-cpp">void printName(const string &amp;name) {   // guarantees the function won't modify the caller's data
+    cout &lt;&lt; name;
+}</code></pre>
+
+  <h3><code>const</code> Member Functions</h3>
+  <p>
+    A member function marked <code>const</code> promises not to modify the object's data members — it can only be called on <code>const</code> objects/references, and the compiler enforces the promise.
+  </p>
+  <pre><code class="language-cpp">class Point {
+    private:
+        int x, y;
+    public:
+        Point(int x, int y) : x(x), y(y) {}
+
+        int getX() const {     // const member function — promises not to modify the object
+            return x;
+            // x = 100;         // COMPILE ERROR if uncommented — const functions can't modify members
+        }
+
+        void setX(int newX) {   // NOT const — this one is ALLOWED to modify
+            x = newX;
+        }
+};
+
+void printX(const Point &amp;p) {
+    cout &lt;&lt; p.getX();   // OK — getX() is const, so it CAN be called on a const reference
+    // p.setX(5);           // COMPILE ERROR — setX() is non-const, cannot be called on a const object
+}</code></pre>
+  <p><strong>Best practice:</strong> mark every member function <code>const</code> if it genuinely doesn't modify the object — this maximizes how flexibly the function can be used (e.g., callable on <code>const</code> references, as shown above) and communicates intent clearly.</p>
+
+  <h2>2. <code>static</code> — The Full Picture</h2>
+  <p><code>static</code> has multiple distinct meanings depending on context — interviewers often ask you to enumerate all of them.</p>
+
+  <table>
+    <thead>
+      <tr><th>Context</th><th>Meaning</th><th>Covered in</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Local variable inside a function</td><td>Persists across function calls; initialized only once</td><td>Module 1.1</td></tr>
+      <tr><td>Global variable/function at file scope</td><td>Restricts visibility to that translation unit (file) only — an older alternative to anonymous namespaces</td><td>New here</td></tr>
+      <tr><td>Class data member</td><td>Shared across all objects of the class — one copy total</td><td>Module 2.5</td></tr>
+      <tr><td>Class member function</td><td>Callable without an object instance; can't access non-static members</td><td>Module 2.5</td></tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-cpp">// static at FILE scope — restricts a function to be usable only within this .cpp file
+static void internalHelper() {
+    cout &lt;&lt; "Only visible in this file";
+}
+
+static int fileLocalCounter = 0; // also only visible/linkable within this file</code></pre>
+
+  <h2>3. Memory Concepts — Full-Module Recap</h2>
+  <p>This section ties together memory-related ideas from across Modules 1–3 into one consolidated reference.</p>
+
+  <table>
+    <thead>
+      <tr><th>Concept</th><th>Summary</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Stack memory</td><td>Automatic allocation/deallocation, tied to scope, fast, limited size</td></tr>
+      <tr><td>Heap memory</td><td>Manual allocation via <code>new</code>/<code>delete</code>, persists until freed, larger, slower</td></tr>
+      <tr><td>Memory leak</td><td>Heap memory allocated but never freed, and no pointer remains to free it later</td></tr>
+      <tr><td>Dangling pointer</td><td>Pointer referencing memory that has already been freed or gone out of scope</td></tr>
+      <tr><td>Shallow vs deep copy</td><td>Shallow copies the pointer (shared ownership bug); deep copies the pointed-to data (safe, independent)</td></tr>
+      <tr><td>RAII</td><td>Acquiring a resource in a constructor and releasing it in a destructor, so cleanup happens automatically via scope</td></tr>
+      <tr><td>Global variables</td><td>Exist for the entire program's runtime, accessible anywhere in the file (or program, if not <code>static</code>)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Mutable Keyword (bonus, less common but occasionally asked)</h2>
+  <p>
+    <code>mutable</code> allows a specific data member to be modified even from within a <code>const</code> member function — an intentional, narrow exception to <code>const</code>-correctness, typically used for internal bookkeeping (like caching or access counters) that shouldn't affect an object's externally observable state.
+  </p>
+  <pre><code class="language-cpp">class Logger {
+    private:
+        mutable int accessCount = 0;   // can be modified even in const functions
+
+    public:
+        void log() const {
+            accessCount++;                // allowed — accessCount is mutable
+            cout &lt;&lt; "Access #" &lt;&lt; accessCount &lt;&lt; endl;
+        }
+};
+
+int main() {
+    const Logger l;
+    l.log(); // Access #1 — works despite l being const, and log() being a const function
+    l.log();  // Access #2
+    return 0;
+}</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain the difference between <code>const int *p</code>, <code>int *const p</code>, and <code>const int *const p</code> with a short example for each.</li>
+    <li>Why does marking a member function <code>const</code> matter for how the function can be called elsewhere in a program?</li>
+    <li>List all four contexts in which <code>static</code> can appear in C++, with a one-line meaning for each.</li>
+    <li>What is <code>mutable</code> used for, and why is it a deliberate, narrow exception rather than a general workaround for <code>const</code>?</li>
+    <li>Summarize the difference between a memory leak and a dangling pointer — in your own words, referencing Module 2.1.</li>
+  </ol>
+
+  <h3>Predict the Output / Identify the Bug</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">class Box {
+    private:
+        int value;
+    public:
+        Box(int v) : value(v) {}
+        int getValue() const { return value; }
+};
+
+int main() {
+    const Box b(10);
+    cout &lt;&lt; b.getValue();
+}</code></pre>
+      Does this compile? Why or why not?
+    </li>
+    <li>
+      <pre><code class="language-cpp">int x = 5;
+const int *p = &amp;x;
+*p = 10;</code></pre>
+      Identify the bug.
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a class <code>Rectangle</code> with private <code>length</code> and <code>width</code>, a const member function <code>area()</code>, and a non-const member function <code>scale(double factor)</code>. Demonstrate that <code>area()</code> can be called on a <code>const Rectangle</code> object but <code>scale()</code> cannot.</li>
+    <li>Write a program demonstrating all four const-pointer variants (<code>int*</code>, <code>const int*</code>, <code>int* const</code>, <code>const int* const</code>) with comments explaining what each one allows or forbids.</li>
+    <li>Write a class <code>CacheDemo</code> with a <code>mutable int lookupCount</code> that increments inside a <code>const</code> member function <code>get(int key)</code>, demonstrating that this is legal despite the function being const.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

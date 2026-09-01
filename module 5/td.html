@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 5.1 — Type Deduction — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="type-deduction">
+  <h1>Module 5.1 — Type Deduction</h1>
+  <p>
+    C++11 introduced <code>auto</code> and <code>decltype</code>, letting the compiler infer a variable's type automatically instead of requiring it to be spelled out explicitly. This isn't "dynamic typing" — the type is still fixed and checked at compile time; only the <em>spelling</em> of the type is deferred to the compiler.
+  </p>
+
+  <h2>1. <code>auto</code> — Basics</h2>
+  <pre><code class="language-cpp">auto x = 10;          // int — deduced from the literal
+auto y = 3.14;           // double
+auto z = 'A';               // char
+auto s = string("Hi");         // string
+auto b = true;                    // bool
+
+// The type is deduced ONCE, at declaration, from the initializer — it does NOT change later
+auto n = 5;
+// n = "hello";   // COMPILE ERROR — n is permanently int, auto is not dynamic typing</code></pre>
+
+  <p><strong><code>auto</code> requires an initializer</strong> — the compiler needs something to deduce the type FROM:</p>
+  <pre><code class="language-cpp">auto x;        // COMPILE ERROR — no initializer, nothing to deduce from
+auto x = 10;     // OK</code></pre>
+
+  <h2>2. Why <code>auto</code> Matters — Verbose Types</h2>
+  <p>
+    <code>auto</code>'s biggest practical value is avoiding painfully long, hard-to-read type names — especially with iterators and nested templates:
+  </p>
+  <pre><code class="language-cpp">// Without auto — verbose and error-prone to type out
+std::map&lt;std::string, std::vector&lt;int&gt;&gt;::iterator it = myMap.begin();
+
+// With auto — identical behavior, far more readable
+auto it = myMap.begin();
+
+// Another common case
+vector&lt;pair&lt;int, string&gt;&gt; data;
+for (auto it = data.begin(); it != data.end(); ++it) { ... }   // vs the fully spelled-out iterator type</code></pre>
+
+  <h2>3. <code>auto</code> with References and Const</h2>
+  <p>
+    By default, <code>auto</code> deduces a <strong>value type</strong> — it strips off <code>&amp;</code> (reference) and top-level <code>const</code> from the initializer's type unless you explicitly ask for them.
+  </p>
+  <pre><code class="language-cpp">int x = 10;
+const int &amp;ref = x;
+
+auto a = ref;          // int — auto STRIPS both const and & by default; a is a COPY, mutable
+auto &amp;b = ref;           // const int& — explicitly adding & preserves the reference (and its const-ness)
+const auto &amp;c = ref;      // const int& — explicit, most defensive form
+
+a = 100;                     // fine — a is an independent copy, doesn't affect x
+// b = 100;                    // COMPILE ERROR — b is const int&, inherited const-ness from ref
+cout &lt;&lt; x;                        // still 10 either way, since only `a` (a copy) was changed</code></pre>
+
+  <p><strong>This matters enormously in range-based for loops:</strong></p>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {1, 2, 3, 4, 5};
+
+for (auto x : v) {          // x is a COPY of each element — modifying x does NOT modify v
+    x *= 2;                    // has no effect on v's actual contents
+}
+cout &lt;&lt; v[0];                     // still 1
+
+for (auto &amp;x : v) {              // x is a REFERENCE — modifying x DOES modify v
+    x *= 2;
+}
+cout &lt;&lt; v[0];                        // 2 — v was actually modified
+
+for (const auto &amp;x : v) {              // x is a const reference — no copy made, but also can't modify
+    cout &lt;&lt; x &lt;&lt; " ";                       // BEST PRACTICE for large objects you only need to read
+}</code></pre>
+  <p><strong>Rule of thumb:</strong> use <code>auto &amp;</code> when you intend to modify elements in place, <code>const auto &amp;</code> when you only need to read (avoids unnecessary copies, especially important for large objects like <code>string</code> or custom classes), and plain <code>auto</code> only when you genuinely want an independent copy.</p>
+
+  <h2>4. <code>auto</code> with Function Return Types (C++14+)</h2>
+  <pre><code class="language-cpp">auto add(int a, int b) {   // return type deduced from the return statement — C++14+
+    return a + b;              // deduced as int
+}
+
+auto multiply(double a, double b) {
+    return a * b;                // deduced as double
+}</code></pre>
+  <p>If a function has multiple return statements, all of them must deduce to the exact same type, or it's a compile error.</p>
+
+  <h2>5. Common <code>auto</code> Pitfalls</h2>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {1, 2, 3};
+auto size = v.size();   // size is deduced as size_t (unsigned!), NOT int
+
+int diff = size - 5;      // if size is small, this can UNDERFLOW (wraps to a huge positive number)
+                              // because size_t is unsigned — the same trap from Module 1.1!
+
+// auto can silently deduce a type you didn't expect:
+auto half = 5 / 2;        // int division → half = 2, NOT 2.5, even though "half" suggests a fraction</code></pre>
+
+  <h2>6. <code>decltype</code></h2>
+  <p>
+    <code>decltype(expr)</code> yields the exact, unmodified type of an expression, WITHOUT evaluating it — unlike <code>auto</code>, it preserves references and const-ness exactly as they appear in the expression's declared type.
+  </p>
+  <pre><code class="language-cpp">int x = 10;
+int &amp;ref = x;
+const int cx = 20;
+
+decltype(x) a = 5;           // int — same type as x
+decltype(ref) b = x;           // int& — decltype PRESERVES the reference-ness, unlike auto
+decltype(cx) c = 30;              // const int — preserves const-ness too</code></pre>
+
+  <h3><code>auto</code> vs <code>decltype</code> — The Key Difference</h3>
+  <pre><code class="language-cpp">int x = 10;
+int &amp;ref = x;
+
+auto a = ref;         // int  — auto strips the reference; a is a NEW independent copy
+decltype(ref) b = x;    // int& — decltype preserves the reference exactly; b IS an alias for x
+
+a = 999;                  // does NOT affect x
+b = 999;                    // DOES affect x, because b is genuinely a reference to it
+cout &lt;&lt; x;                     // 999 — changed via b, unaffected by a</code></pre>
+
+  <h3><code>decltype</code> for Generic/Template Code</h3>
+  <p>
+    <code>decltype</code> is especially useful in template code where you need to declare a variable of "whatever type this expression produces," without knowing that type in advance:
+  </p>
+  <pre><code class="language-cpp">template &lt;typename T1, typename T2&gt;
+auto add(T1 a, T2 b) -&gt; decltype(a + b) {   // trailing return type — needed pre-C++14
+    return a + b;
+}
+// The return type is deduced as "whatever type a+b naturally produces" —
+// e.g., int+double naturally produces double, and decltype(a+b) captures that automatically.
+
+int main() {
+    cout &lt;&lt; add(3, 4.5);   // 7.5 — return type correctly deduced as double
+    return 0;
+}</code></pre>
+  <p>In modern C++14+, this specific pattern is largely superseded by plain <code>auto</code> return type deduction (section 4 above) for simple cases — but <code>decltype</code> remains essential whenever exact type preservation (references, const-ness) genuinely matters.</p>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Why does <code>auto x = ref;</code> (where <code>ref</code> is a reference) produce a plain copy rather than another reference? How do you force <code>auto</code> to deduce a reference?</li>
+    <li>Explain the underflow bug that can occur when subtracting from a variable declared with <code>auto</code> from <code>vector::size()</code>.</li>
+    <li>What is the core difference between what <code>auto</code> and <code>decltype</code> each deduce, given the same reference expression?</li>
+    <li>In a range-based for loop, explain the practical difference between <code>for (auto x : v)</code>, <code>for (auto &amp;x : v)</code>, and <code>for (const auto &amp;x : v)</code>.</li>
+    <li>Why must <code>auto</code> always have an initializer at the point of declaration?</li>
+  </ol>
+
+  <h3>Predict the Output</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">vector&lt;int&gt; v = {10, 20, 30};
+for (auto x : v) x += 100;
+for (auto &amp;y : v) y += 100;
+cout &lt;&lt; v[0] &lt;&lt; " " &lt;&lt; v[1] &lt;&lt; " " &lt;&lt; v[2];</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">int a = 5;
+int &amp;r = a;
+auto x = r;
+decltype(r) y = a;
+x = 100;
+y = 200;
+cout &lt;&lt; a;</code></pre>
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program using <code>auto</code> to iterate over a <code>map&lt;string, vector&lt;int&gt;&gt;</code> and print each key with the sum of its associated vector.</li>
+    <li>Write a template function using <code>decltype</code> for its return type that adds two values of potentially different types.</li>
+    <li>Write a program demonstrating the <code>vector::size()</code> underflow bug with <code>auto</code>, then show the corrected version using an explicit signed type or a safe comparison.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

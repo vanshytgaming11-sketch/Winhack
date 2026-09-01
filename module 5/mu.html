@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 5.7 — Modern Utilities — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="modern-utilities">
+  <h1>Module 5.7 — Modern Utilities</h1>
+  <p>
+    This final sub-topic of Module 5 covers four utility types from modern C++ that solve specific, common problems: grouping heterogeneous values (<code>tuple</code>), representing "a value that might not exist" (<code>optional</code>), representing "one of several possible types" (<code>variant</code>), and wrapping any callable thing uniformly (<code>function</code>).
+  </p>
+
+  <h2>1. <code>std::tuple</code></h2>
+  <p>
+    Where <code>pair</code> (Module 4.2) holds exactly two values, <code>tuple</code> generalizes this to hold <strong>any number</strong> of values of potentially different types.
+  </p>
+  <pre><code class="language-cpp">#include &lt;tuple&gt;
+using namespace std;
+
+tuple&lt;int, string, double&gt; t1(22, "Vinit", 8.5);
+auto t2 = make_tuple(20, "Aman", 9.1);   // type-deduced construction
+
+cout &lt;&lt; get&lt;0&gt;(t1) &lt;&lt; " " &lt;&lt; get&lt;1&gt;(t1) &lt;&lt; " " &lt;&lt; get&lt;2&gt;(t1);   // 22 Vinit 8.5
+// Access is by COMPILE-TIME INDEX via get&lt;N&gt;() — there's no .first/.second/.third generalization</code></pre>
+
+  <h3>Structured Bindings with <code>tuple</code> (cleaner than repeated <code>get&lt;N&gt;()</code>)</h3>
+  <pre><code class="language-cpp">tuple&lt;int, string, double&gt; student(22, "Vinit", 8.5);
+auto [age, name, gpa] = student;   // unpacks all three values at once (Module 5.6)
+cout &lt;&lt; age &lt;&lt; " " &lt;&lt; name &lt;&lt; " " &lt;&lt; gpa;</code></pre>
+
+  <h3>Returning Multiple Values from a Function</h3>
+  <pre><code class="language-cpp">tuple&lt;int, int, int&gt; minMaxSum(vector&lt;int&gt; &amp;v) {
+    int mn = v[0], mx = v[0], sum = 0;
+    for (int x : v) {
+        mn = min(mn, x);
+        mx = max(mx, x);
+        sum += x;
+    }
+    return {mn, mx, sum};
+}
+
+int main() {
+    vector&lt;int&gt; v = {5, 2, 9, 1, 7};
+    auto [minVal, maxVal, total] = minMaxSum(v);
+    cout &lt;&lt; minVal &lt;&lt; " " &lt;&lt; maxVal &lt;&lt; " " &lt;&lt; total;   // 1 9 24
+    return 0;
+}</code></pre>
+  <p><strong>When to use <code>tuple</code> vs a <code>struct</code>:</strong> for two or three loosely related, temporary values (especially inside a single function), <code>tuple</code> is quick and convenient. For anything with real semantic meaning that's used across multiple functions, a named <code>struct</code> is almost always clearer — field names like <code>.age</code> communicate intent far better than <code>get&lt;0&gt;()</code>.</p>
+
+  <h2>2. <code>std::optional</code> (C++17+)</h2>
+  <p>
+    Represents a value that may or may not be present — a type-safe alternative to using a sentinel value (like <code>-1</code> or <code>nullptr</code>) to mean "no result," which can be ambiguous if the sentinel is also a valid actual value.
+  </p>
+  <pre><code class="language-cpp">#include &lt;optional&gt;
+using namespace std;
+
+optional&lt;int&gt; findValue(vector&lt;int&gt; &amp;v, int target) {
+    for (int x : v) {
+        if (x == target) return x;   // wraps the found value
+    }
+    return nullopt;   // explicitly represents "no value found" — nullopt is optional's equivalent of nullptr
+}
+
+int main() {
+    vector&lt;int&gt; v = {10, 20, 30};
+
+    optional&lt;int&gt; result = findValue(v, 20);
+    if (result.has_value()) {
+        cout &lt;&lt; "Found: " &lt;&lt; result.value();   // Found: 20
+    }
+
+    optional&lt;int&gt; result2 = findValue(v, 99);
+    if (!result2) {                                 // optional also supports direct bool-context checking
+        cout &lt;&lt; "Not found" &lt;&lt; endl;                 // this runs
+    }
+
+    cout &lt;&lt; result2.value_or(-1);                       // -1 — provides a fallback default if empty, safely
+    return 0;
+}</code></pre>
+
+  <h3>Why This Is Better Than a Sentinel Value</h3>
+  <pre><code class="language-cpp">// The OLD, ambiguous way — using -1 to mean "not found":
+int findValueOld(vector&lt;int&gt; &amp;v, int target) {
+    for (int x : v) if (x == target) return x;
+    return -1;   // AMBIGUOUS: what if -1 is a legitimately valid value that WAS actually in the vector?
+}
+
+// optional&lt;int&gt; removes this ambiguity entirely — "no value" and "the value -1" are now
+// distinguishable states, both representable and neither confused with the other.</code></pre>
+  <p><strong>Critical gotcha:</strong> calling <code>.value()</code> on an empty <code>optional</code> throws <code>std::bad_optional_access</code> — always check <code>.has_value()</code> (or use <code>.value_or()</code> for a safe default) before accessing.</p>
+
+  <h2>3. <code>std::variant</code> (C++17+)</h2>
+  <p>
+    A type-safe union — holds a value that could be ONE of several specified types at any given time, and tracks which type is currently active. Unlike a C-style <code>union</code>, <code>variant</code> knows its own active type and prevents reading it as the wrong one.
+  </p>
+  <pre><code class="language-cpp">#include &lt;variant&gt;
+using namespace std;
+
+variant&lt;int, string, double&gt; v;
+
+v = 42;
+cout &lt;&lt; get&lt;int&gt;(v);         // 42 — access by TYPE
+
+v = "Hello";
+cout &lt;&lt; get&lt;string&gt;(v);        // Hello — v now holds a string instead
+
+v = 3.14;
+cout &lt;&lt; get&lt;double&gt;(v);           // 3.14
+
+// Attempting to get&lt;&gt; the WRONG currently-inactive type throws std::bad_variant_access:
+v = 42;
+// cout &lt;&lt; get&lt;string&gt;(v);   // THROWS — v currently holds an int, not a string
+
+cout &lt;&lt; v.index();     // 0 — returns the index (0-based, matching declaration order) of the CURRENTLY active type</code></pre>
+
+  <h3>Safely Checking the Active Type — <code>holds_alternative</code></h3>
+  <pre><code class="language-cpp">variant&lt;int, string&gt; v = "Hello";
+
+if (holds_alternative&lt;string&gt;(v)) {
+    cout &lt;&lt; "Currently holds a string: " &lt;&lt; get&lt;string&gt;(v);
+} else if (holds_alternative&lt;int&gt;(v)) {
+    cout &lt;&lt; "Currently holds an int: " &lt;&lt; get&lt;int&gt;(v);
+}</code></pre>
+
+  <h3>Processing a <code>variant</code> Generically with <code>visit</code></h3>
+  <pre><code class="language-cpp">variant&lt;int, string, double&gt; v = 3.14;
+
+visit([](auto &amp;&amp;value) {   // a generic lambda — automatically handles WHICHEVER type is currently active
+    cout &lt;&lt; "Value: " &lt;&lt; value;
+}, v);</code></pre>
+  <p><strong>Common use case:</strong> representing a value that could legitimately be one of several distinct types — e.g., a JSON-like value (number, string, boolean), or a parser result that could be either a successfully parsed value or an error description.</p>
+
+  <h2>4. <code>std::function</code></h2>
+  <p>
+    A general-purpose, polymorphic wrapper that can store ANY callable entity — a regular function, a function pointer, a lambda (with or without captures), or a functor (an object with <code>operator()</code>) — as long as its call signature matches.
+  </p>
+  <pre><code class="language-cpp">#include &lt;functional&gt;
+using namespace std;
+
+int add(int a, int b) { return a + b; }
+
+function&lt;int(int, int)&gt; f1 = add;                              // wraps a regular function
+function&lt;int(int, int)&gt; f2 = [](int a, int b) { return a * b; }; // wraps a lambda
+
+int x = 10;
+function&lt;int()&gt; f3 = [x]() { return x * 2; };                   // wraps a lambda that captures state
+
+cout &lt;&lt; f1(3, 4) &lt;&lt; " " &lt;&lt; f2(3, 4) &lt;&lt; " " &lt;&lt; f3();   // 7 12 20</code></pre>
+
+  <h3>Why <code>std::function</code> Matters — Storing Heterogeneous Callables</h3>
+  <pre><code class="language-cpp">vector&lt;function&lt;int(int)&gt;&gt; operations;
+
+operations.push_back([](int x) { return x + 1; });
+operations.push_back([](int x) { return x * 2; });
+operations.push_back([](int x) { return x * x; });
+
+for (auto &amp;op : operations) {
+    cout &lt;&lt; op(5) &lt;&lt; " ";   // 6 10 25 — a single container holds THREE DIFFERENT lambda types uniformly
+}</code></pre>
+  <p>
+    This is precisely the limitation function pointers (Module 3.4) couldn't overcome: a raw function pointer variable can only store things matching a plain function signature, and cannot hold a lambda that captures state. <code>std::function</code> erases these differences behind one uniform, storable type — at the cost of a small runtime overhead compared to a raw function pointer or a directly-typed lambda (via <code>auto</code>).
+  </p>
+
+  <h3>Using <code>std::function</code> as a Class Member (Callback Pattern)</h3>
+  <pre><code class="language-cpp">class Button {
+    public:
+        function&lt;void()&gt; onClick;   // can be assigned ANY callable matching void()
+
+        void click() {
+            if (onClick) onClick();   // std::function is bool-convertible — checks if it holds a valid target
+        }
+};
+
+int main() {
+    Button b;
+    b.onClick = []() { cout &lt;&lt; "Button clicked!" &lt;&lt; endl; };
+    b.click();   // Button clicked!
+    return 0;
+}</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>When would you prefer <code>tuple</code> over a named <code>struct</code>, and vice versa?</li>
+    <li>Explain the ambiguity problem <code>optional</code> solves compared to using a sentinel value like <code>-1</code> to represent "no result."</li>
+    <li>What's the difference between a C-style <code>union</code> and <code>std::variant</code> in terms of type safety?</li>
+    <li>Why can a raw function pointer not store a lambda that captures surrounding variables, while <code>std::function</code> can?</li>
+    <li>What happens if you call <code>get&lt;string&gt;(v)</code> on a <code>variant&lt;int,string&gt;</code> that currently holds an <code>int</code>?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function returning a <code>tuple&lt;bool, string, int&gt;</code> representing a parse result (success flag, error message if any, parsed value), and unpack it with structured bindings at the call site.</li>
+    <li>Write a function <code>optional&lt;double&gt; safeDivide(double a, double b)</code> that returns <code>nullopt</code> if dividing by zero, and demonstrate correct usage with <code>.has_value()</code> and <code>.value_or()</code>.</li>
+    <li>Write a program using <code>variant&lt;int, string, bool&gt;</code> to represent a simple configuration value, and use <code>visit</code> with a generic lambda to print each value regardless of its active type.</li>
+    <li>Write a simple event system class that stores a <code>vector&lt;function&lt;void(string)&gt;&gt;</code> of "listeners," with a method to add a listener and a method to trigger all of them with a given message.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

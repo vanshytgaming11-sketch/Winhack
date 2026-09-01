@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.8 — Graphs — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="graphs">
+  <h1>Module 6.8 — Graphs</h1>
+  <p>
+    A graph is a set of nodes (vertices) connected by edges, representing relationships that aren't strictly hierarchical (unlike trees). Graphs model an enormous range of real problems — networks, dependencies, maps — and BFS/DFS are the foundation nearly every graph algorithm builds on.
+  </p>
+
+  <h2>1. Graph Representations</h2>
+
+  <h3>Adjacency List (most common — efficient for sparse graphs)</h3>
+  <pre><code class="language-cpp">int n = 5;   // number of nodes
+vector&lt;vector&lt;int&gt;&gt; adj(n);   // adj[u] = list of nodes directly connected to u
+
+// Adding an undirected edge between u and v
+void addEdge(vector&lt;vector&lt;int&gt;&gt; &amp;adj, int u, int v) {
+    adj[u].push_back(v);
+    adj[v].push_back(u);   // omit this line for a DIRECTED edge (u -&gt; v only)
+}
+
+addEdge(adj, 0, 1);
+addEdge(adj, 0, 2);
+addEdge(adj, 1, 3);
+// adj[0] = {1, 2}, adj[1] = {0, 3}, adj[2] = {0}, adj[3] = {1}</code></pre>
+
+  <h3>Adjacency Matrix (simpler, but wasteful for sparse graphs)</h3>
+  <pre><code class="language-cpp">vector&lt;vector&lt;int&gt;&gt; matrix(n, vector&lt;int&gt;(n, 0));
+matrix[0][1] = 1;   // edge from 0 to 1
+matrix[1][0] = 1;      // undirected — mirror it
+
+// matrix[u][v] == 1 means an edge exists between u and v — O(1) EDGE CHECK,
+// but O(V²) SPACE regardless of how many edges actually exist</code></pre>
+
+  <h3>Adjacency List vs Matrix — When to Use Which</h3>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>Adjacency list</th><th>Adjacency matrix</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Space</td><td>O(V + E)</td><td>O(V²), regardless of actual edge count</td></tr>
+      <tr><td>Check if edge (u,v) exists</td><td>O(degree of u)</td><td>O(1)</td></tr>
+      <tr><td>Iterate all neighbors of a node</td><td>O(degree of u) — efficient</td><td>O(V) — must scan the entire row</td></tr>
+      <tr><td>Best for</td><td>Sparse graphs (most real-world graphs)</td><td>Dense graphs, or when O(1) edge lookup matters most</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Weighted Graphs</h3>
+  <pre><code class="language-cpp">vector&lt;vector&lt;pair&lt;int,int&gt;&gt;&gt; adj(n);   // adj[u] = list of (neighbor, weight) pairs — using pair, Module 4.2
+
+void addWeightedEdge(vector&lt;vector&lt;pair&lt;int,int&gt;&gt;&gt; &amp;adj, int u, int v, int w) {
+    adj[u].push_back({v, w});
+    adj[v].push_back({u, w});
+}</code></pre>
+
+  <h2>2. Depth-First Search (DFS)</h2>
+  <pre><code class="language-cpp">void dfs(int node, vector&lt;vector&lt;int&gt;&gt; &amp;adj, vector&lt;bool&gt; &amp;visited) {
+    visited[node] = true;
+    cout &lt;&lt; node &lt;&lt; " ";
+
+    for (int neighbor : adj[node]) {
+        if (!visited[neighbor]) {
+            dfs(neighbor, adj, visited);
+        }
+    }
+}
+// O(V + E) time — every vertex and every edge is examined exactly once
+// O(V) space — the recursive call stack, worst case as deep as the number of vertices</code></pre>
+
+  <h3>Iterative DFS (using an explicit stack — same pattern as tree DFS in Module 6.6)</h3>
+  <pre><code class="language-cpp">void dfsIterative(int start, vector&lt;vector&lt;int&gt;&gt; &amp;adj) {
+    vector&lt;bool&gt; visited(adj.size(), false);
+    stack&lt;int&gt; st;
+    st.push(start);
+
+    while (!st.empty()) {
+        int node = st.top();
+        st.pop();
+
+        if (visited[node]) continue;   // may be pushed multiple times before being visited — skip duplicates
+        visited[node] = true;
+        cout &lt;&lt; node &lt;&lt; " ";
+
+        for (int neighbor : adj[node]) {
+            if (!visited[neighbor]) st.push(neighbor);
+        }
+    }
+}</code></pre>
+
+  <h2>3. Breadth-First Search (BFS)</h2>
+  <pre><code class="language-cpp">void bfs(int start, vector&lt;vector&lt;int&gt;&gt; &amp;adj) {
+    vector&lt;bool&gt; visited(adj.size(), false);
+    queue&lt;int&gt; q;
+
+    visited[start] = true;
+    q.push(start);
+
+    while (!q.empty()) {
+        int node = q.front();
+        q.pop();
+        cout &lt;&lt; node &lt;&lt; " ";
+
+        for (int neighbor : adj[node]) {
+            if (!visited[neighbor]) {
+                visited[neighbor] = true;   // mark visited AT PUSH TIME, not pop time — critical detail below
+                q.push(neighbor);
+            }
+        }
+    }
+}
+// O(V + E) time, O(V) space</code></pre>
+  <p>
+    <strong>Critical detail — mark visited when PUSHING, not when POPPING:</strong> if you wait until popping to mark a node visited, the same node can be pushed onto the queue multiple times (once for each edge leading to it) before it's ever processed — wasting time and, in some problems, causing incorrect results. Marking at push time guarantees each node enters the queue exactly once.
+  </p>
+
+  <h3>BFS Guarantees Shortest Path in UNWEIGHTED Graphs</h3>
+  <p>
+    Because BFS explores level by level, the first time it reaches any node is guaranteed to be via the shortest possible path (fewest edges) from the start — this is why BFS, not DFS, is used for shortest-path problems on unweighted graphs.
+  </p>
+  <pre><code class="language-cpp">int shortestPath(int start, int end, vector&lt;vector&lt;int&gt;&gt; &amp;adj) {
+    vector&lt;int&gt; dist(adj.size(), -1);
+    queue&lt;int&gt; q;
+
+    dist[start] = 0;
+    q.push(start);
+
+    while (!q.empty()) {
+        int node = q.front();
+        q.pop();
+
+        if (node == end) return dist[node];   // found it — this IS the shortest distance, guaranteed
+
+        for (int neighbor : adj[node]) {
+            if (dist[neighbor] == -1) {   // not yet visited
+                dist[neighbor] = dist[node] + 1;
+                q.push(neighbor);
+            }
+        }
+    }
+    return -1;   // unreachable
+}</code></pre>
+
+  <h2>4. DFS vs BFS — When to Use Which</h2>
+  <table>
+    <thead>
+      <tr><th>Scenario</th><th>Preferred approach</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Shortest path in an unweighted graph</td><td>BFS</td></tr>
+      <tr><td>Detecting cycles</td><td>Either — DFS often more natural</td></tr>
+      <tr><td>Exploring all paths / backtracking-style exploration</td><td>DFS</td></tr>
+      <tr><td>Connected components</td><td>Either</td></tr>
+      <tr><td>Topological sort</td><td>DFS (or Kahn's BFS-based algorithm — see Module 6.9 for backtracking-adjacent context)</td></tr>
+      <tr><td>Level-by-level processing needed</td><td>BFS</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Connected Components</h2>
+  <pre><code class="language-cpp">int countComponents(int n, vector&lt;vector&lt;int&gt;&gt; &amp;adj) {
+    vector&lt;bool&gt; visited(n, false);
+    int components = 0;
+
+    for (int i = 0; i &lt; n; i++) {
+        if (!visited[i]) {
+            dfs(i, adj, visited);   // explores the ENTIRE component containing i
+            components++;
+        }
+    }
+    return components;
+}
+// O(V + E) — each DFS call, summed across all starting points, still only visits each node/edge once total</code></pre>
+
+  <h2>6. Cycle Detection</h2>
+
+  <h3>In an Undirected Graph</h3>
+  <pre><code class="language-cpp">bool hasCycleUndirected(int node, int parent, vector&lt;vector&lt;int&gt;&gt; &amp;adj, vector&lt;bool&gt; &amp;visited) {
+    visited[node] = true;
+
+    for (int neighbor : adj[node]) {
+        if (!visited[neighbor]) {
+            if (hasCycleUndirected(neighbor, node, adj, visited)) return true;
+        } else if (neighbor != parent) {
+            // visited AND not the node we just came from — a back edge exists — CYCLE
+            return true;
+        }
+    }
+    return false;
+}</code></pre>
+
+  <h3>In a Directed Graph (needs a separate "in current recursion path" tracker)</h3>
+  <pre><code class="language-cpp">bool hasCycleDirected(int node, vector&lt;vector&lt;int&gt;&gt; &amp;adj, vector&lt;bool&gt; &amp;visited, vector&lt;bool&gt; &amp;inStack) {
+    visited[node] = true;
+    inStack[node] = true;
+
+    for (int neighbor : adj[node]) {
+        if (!visited[neighbor]) {
+            if (hasCycleDirected(neighbor, adj, visited, inStack)) return true;
+        } else if (inStack[neighbor]) {
+            // neighbor is CURRENTLY on the recursion stack — a back edge WITHIN the current path — CYCLE
+            return true;
+        }
+    }
+
+    inStack[node] = false;   // backtrack — this node is no longer on the current path
+    return false;
+}
+// A separate inStack tracker is REQUIRED for directed graphs, because a node being "visited"
+// overall doesn't mean it's part of a cycle — it might have been fully explored via a
+// DIFFERENT path earlier, which is perfectly fine and not a cycle</code></pre>
+
+  <h2>7. Dijkstra's Shortest Path Algorithm (Weighted Graphs)</h2>
+  <p>
+    Extends BFS's shortest-path idea to weighted graphs (with non-negative weights), using a min-heap (Module 6.7) to always process the currently-closest unvisited node next — a greedy approach.
+  </p>
+  <pre><code class="language-cpp">vector&lt;int&gt; dijkstra(int start, int n, vector&lt;vector&lt;pair&lt;int,int&gt;&gt;&gt; &amp;adj) {
+    vector&lt;int&gt; dist(n, INT_MAX);
+    priority_queue&lt;pair&lt;int,int&gt;, vector&lt;pair&lt;int,int&gt;&gt;, greater&lt;pair&lt;int,int&gt;&gt;&gt; pq;  // min-heap of (distance, node)
+
+    dist[start] = 0;
+    pq.push({0, start});
+
+    while (!pq.empty()) {
+        auto [d, node] = pq.top();   // structured binding — Module 5.6
+        pq.pop();
+
+        if (d &gt; dist[node]) continue;   // a shorter path to `node` was already found — this entry is stale, skip it
+
+        for (auto &amp;[neighbor, weight] : adj[node]) {
+            int newDist = dist[node] + weight;
+            if (newDist &lt; dist[neighbor]) {
+                dist[neighbor] = newDist;
+                pq.push({newDist, neighbor});
+            }
+        }
+    }
+    return dist;
+}
+// O((V + E) log V) time — each edge may trigger a heap push, each push/pop is O(log V)
+// This directly reuses the priority_queue mechanics from Module 4.3 and the heap
+// internals from Module 4.8/6.7 — a natural capstone application of prior modules</code></pre>
+  <p><strong>Why this only works with non-negative weights:</strong> the greedy assumption — that once a node is popped with its minimum distance, that distance can never be improved — breaks down if an edge could have negative weight, since a longer path taken later could still end up cheaper overall. (Graphs with negative weights require Bellman-Ford instead, a stretch topic beyond this module's core scope.)</p>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why BFS (not DFS) guarantees the shortest path in an unweighted graph.</li>
+    <li>Why must a node be marked visited at PUSH time rather than POP time in BFS? What bug occurs if you mark it at pop time instead?</li>
+    <li>Explain why cycle detection in a directed graph requires a separate "in current recursion stack" tracker, while undirected cycle detection only needs a simple "parent" check.</li>
+    <li>Why does Dijkstra's algorithm fail to produce correct results on graphs with negative edge weights?</li>
+    <li>Compare adjacency list and adjacency matrix representations — for a graph with 1000 nodes and only 2000 edges, which would you choose and why?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function to detect whether a given undirected graph is bipartite, using BFS or DFS with 2-coloring.</li>
+    <li>Write a function that finds the number of islands in a 2D grid (connected components of '1's), treating the grid as an implicit graph.</li>
+    <li>Write a function implementing topological sort on a directed acyclic graph (DAG) using DFS with a stack (post-order-based approach).</li>
+    <li>Write a function that finds the shortest path in a maze (2D grid with walls) from a start cell to an end cell using BFS.</li>
+    <li>Implement Dijkstra's algorithm and trace through it manually (in comments) on a small 5-node weighted graph of your choosing.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

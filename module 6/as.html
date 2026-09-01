@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.2 — Arrays &amp; Strings (Patterns) — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="arrays-strings-patterns">
+  <h1>Module 6.2 — Arrays &amp; Strings (Patterns)</h1>
+  <p>
+    Module 1.4 covered array/string mechanics. This module covers the recurring <strong>algorithmic patterns</strong> used to solve array/string interview problems efficiently: traversal variants, prefix sums, two pointers, and sliding window. These four patterns alone solve a large fraction of all array/string interview questions.
+  </p>
+
+  <h2>1. Traversal Variants</h2>
+  <p>Beyond simple left-to-right traversal, several traversal patterns come up repeatedly:</p>
+
+  <h3>Traversing from both ends simultaneously</h3>
+  <pre><code class="language-cpp">// Used heavily in two-pointer problems (section 3 below)
+int left = 0, right = arr.size() - 1;
+while (left &lt; right) {
+    // process arr[left] and arr[right]
+    left++;
+    right--;
+}</code></pre>
+
+  <h3>Traversing with a "look-ahead" or "look-behind"</h3>
+  <pre><code class="language-cpp">// Compare each element to the next
+for (int i = 0; i &lt; arr.size() - 1; i++) {
+    if (arr[i] &gt; arr[i+1]) {
+        cout &lt;&lt; "Not sorted at index " &lt;&lt; i;
+    }
+}</code></pre>
+
+  <h2>2. Prefix Sums</h2>
+  <p>
+    A prefix sum array precomputes cumulative sums, so that the sum of ANY subarray <code>[l, r]</code> can be answered in O(1) after O(n) preprocessing — instead of O(n) per query with a naive approach.
+  </p>
+  <pre><code class="language-cpp">vector&lt;int&gt; arr = {3, 1, 4, 1, 5, 9, 2};
+
+// Build prefix sum: prefix[i] = sum of arr[0..i-1]
+vector&lt;int&gt; prefix(arr.size() + 1, 0);
+for (int i = 0; i &lt; arr.size(); i++) {
+    prefix[i + 1] = prefix[i] + arr[i];
+}
+// prefix = {0, 3, 4, 8, 9, 14, 23, 25}
+
+// Sum of subarray [l, r] INCLUSIVE = prefix[r+1] - prefix[l]
+int sumRange = prefix[5] - prefix[2];   // sum of arr[2..4] = 4+1+5 = 10
+cout &lt;&lt; sumRange;                          // 10</code></pre>
+  <p><strong>Why this matters:</strong> if you need to answer MANY range-sum queries on the same array, prefix sums turn an O(n) per-query brute force into O(1) per query, after a one-time O(n) setup — a massive improvement when there are many queries.</p>
+
+  <h3>2D Prefix Sums (brief extension)</h3>
+  <pre><code class="language-cpp">// For a matrix, prefix2D[i][j] = sum of all elements in the rectangle from (0,0) to (i-1,j-1)
+// Allows O(1) sum queries over any rectangular sub-region after O(rows*cols) preprocessing —
+// the 2D generalization of the same idea, common in matrix-heavy interview problems.</code></pre>
+
+  <h2>3. Two-Pointer Technique</h2>
+  <p>
+    Uses two indices that move through the array according to some logic — either from opposite ends converging inward, or both moving forward at different speeds. This typically reduces an O(n²) brute force to O(n).
+  </p>
+
+  <h3>Pattern A — Opposite Ends Converging (already previewed in Module 1.4)</h3>
+  <pre><code class="language-cpp">bool isPalindrome(string s) {
+    int left = 0, right = s.length() - 1;
+    while (left &lt; right) {
+        if (s[left] != s[right]) return false;
+        left++;
+        right--;
+    }
+    return true;
+}
+// O(n) time, O(1) space</code></pre>
+
+  <h3>Two Sum on a SORTED Array (classic two-pointer application)</h3>
+  <pre><code class="language-cpp">pair&lt;int,int&gt; twoSumSorted(vector&lt;int&gt; &amp;arr, int target) {
+    int left = 0, right = arr.size() - 1;
+    while (left &lt; right) {
+        int sum = arr[left] + arr[right];
+        if (sum == target) return {left, right};
+        else if (sum &lt; target) left++;    // sum too small — need a bigger value, move left pointer up
+        else right--;                          // sum too large — need a smaller value, move right pointer down
+    }
+    return {-1, -1};   // not found
+}
+// O(n) time — compare to the brute-force O(n²) nested-loop approach</code></pre>
+  <p><strong>Why this works:</strong> because the array is sorted, moving <code>left</code> forward strictly increases the sum, and moving <code>right</code> backward strictly decreases it — this monotonic property is exactly what lets two pointers replace a nested loop.</p>
+
+  <h3>Pattern B — Fast/Slow Pointers (same direction, different speeds)</h3>
+  <p>This variant is covered in full depth in Module 6.3 (Linked Lists), where it's most commonly applied — but it works on arrays too:</p>
+  <pre><code class="language-cpp">// Remove duplicates from a SORTED array in place, return new length
+int removeDuplicates(vector&lt;int&gt; &amp;arr) {
+    if (arr.empty()) return 0;
+    int slow = 0;   // tracks the position of the last unique element
+    for (int fast = 1; fast &lt; arr.size(); fast++) {
+        if (arr[fast] != arr[slow]) {
+            slow++;
+            arr[slow] = arr[fast];
+        }
+    }
+    return slow + 1;   // new logical length
+}
+// O(n) time, O(1) EXTRA space (modifies in place)</code></pre>
+
+  <h2>4. Sliding Window</h2>
+  <p>
+    Maintains a "window" (a contiguous subrange) that expands and/or contracts as it moves across the array/string, avoiding redundant recomputation. Used for subarray/substring problems involving a size constraint, a sum constraint, or a uniqueness constraint.
+  </p>
+
+  <h3>Fixed-Size Window — Maximum Sum Subarray of Size K</h3>
+  <pre><code class="language-cpp">int maxSumSubarray(vector&lt;int&gt; &amp;arr, int k) {
+    int windowSum = 0;
+    for (int i = 0; i &lt; k; i++) windowSum += arr[i];   // sum of the FIRST window
+
+    int maxSum = windowSum;
+    for (int i = k; i &lt; arr.size(); i++) {
+        windowSum += arr[i] - arr[i - k];   // SLIDE: add new element, remove the one leaving the window
+        maxSum = max(maxSum, windowSum);
+    }
+    return maxSum;
+}
+// O(n) time — compare to brute force recomputing each window's sum from scratch, which would be O(n*k)</code></pre>
+
+  <h3>Variable-Size Window — Smallest Subarray with Sum ≥ Target</h3>
+  <pre><code class="language-cpp">int minSubarrayLen(vector&lt;int&gt; &amp;arr, int target) {
+    int left = 0, sum = 0, minLen = INT_MAX;
+
+    for (int right = 0; right &lt; arr.size(); right++) {
+        sum += arr[right];                        // EXPAND the window by including arr[right]
+
+        while (sum &gt;= target) {                      // window is big enough — try to SHRINK it
+            minLen = min(minLen, right - left + 1);
+            sum -= arr[left];
+            left++;
+        }
+    }
+    return (minLen == INT_MAX) ? 0 : minLen;
+}
+// O(n) time — even though there's a nested while loop, each element is added and removed
+// from the window AT MOST ONCE across the entire run, so the total work is still O(n), not O(n²)</code></pre>
+  <p><strong>Why this is still O(n), despite the nested loop:</strong> the <code>right</code> pointer advances exactly n times total, and the <code>left</code> pointer also advances at most n times total (across the ENTIRE function run, not per outer iteration) — so total work across both loops combined is O(n) + O(n) = O(n), not O(n²). This is a subtle but frequently-tested complexity analysis point.</p>
+
+  <h3>Variable-Size Window — Longest Substring Without Repeating Characters</h3>
+  <pre><code class="language-cpp">int lengthOfLongestSubstring(string s) {
+    unordered_set&lt;char&gt; window;
+    int left = 0, maxLen = 0;
+
+    for (int right = 0; right &lt; s.length(); right++) {
+        while (window.count(s[right])) {         // duplicate found — shrink from the left until it's gone
+            window.erase(s[left]);
+            left++;
+        }
+        window.insert(s[right]);
+        maxLen = max(maxLen, right - left + 1);
+    }
+    return maxLen;
+}
+// O(n) time (amortized, same reasoning as above), O(min(n, charset size)) space</code></pre>
+
+  <h2>5. Choosing the Right Pattern — Quick Reference</h2>
+  <table>
+    <thead>
+      <tr><th>Signal in the problem</th><th>Likely pattern</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>"Sum of a range" queried multiple times</td><td>Prefix sums</td></tr>
+      <tr><td>Sorted array, looking for a pair/triplet matching a condition</td><td>Two pointers (converging)</td></tr>
+      <tr><td>"Remove duplicates in place", "partition array"</td><td>Two pointers (fast/slow, same direction)</td></tr>
+      <tr><td>"Subarray of size K", "max/min sum of a fixed-size window"</td><td>Sliding window (fixed size)</td></tr>
+      <tr><td>"Smallest/longest subarray satisfying a condition"</td><td>Sliding window (variable size)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why the variable-size sliding window approach for "smallest subarray with sum ≥ target" is O(n) despite containing a nested loop.</li>
+    <li>Why does the two-pointer approach for two-sum require the array to be SORTED first? What would go wrong on unsorted data?</li>
+    <li>Explain how prefix sums turn an O(n) per-query range-sum operation into O(1), and what the one-time setup cost is.</li>
+    <li>What's the key difference between the "converging" and "fast/slow" two-pointer patterns — when would you use each?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function using prefix sums to answer multiple range-sum queries efficiently on a static array, given as a list of (l, r) pairs.</li>
+    <li>Write a two-pointer function that finds all unique triplets in an array that sum to zero (the classic "3Sum" problem) — sort first, then fix one element and two-pointer the rest.</li>
+    <li>Write a sliding window function that finds the length of the longest subarray containing at most K distinct integers.</li>
+    <li>Write a function using the fast/slow two-pointer pattern to move all zeros in an array to the end, while maintaining the relative order of non-zero elements, in place.</li>
+    <li>Write a sliding window function to find all starting indices of anagrams of a pattern string <code>p</code> within a string <code>s</code> (fixed-size window, using frequency maps).</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

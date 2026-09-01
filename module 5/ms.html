@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 5.4 — Move Semantics — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="move-semantics">
+  <h1>Module 5.4 — Move Semantics</h1>
+  <p>
+    Move semantics, introduced in C++11, allow resources (like heap-allocated memory) to be transferred from one object to another WITHOUT copying the underlying data — instead, ownership is simply "stolen" from a temporary or explicitly-marked source object. This is one of modern C++'s most important performance features, and directly underlies how <code>unique_ptr</code> can be "moved but not copied" from Module 5.3.
+  </p>
+
+  <h2>1. Lvalues vs Rvalues</h2>
+  <p>Every C++ expression is categorized as either an lvalue or an rvalue — this distinction is the foundation move semantics is built on.</p>
+  <table>
+    <thead>
+      <tr><th>Category</th><th>Meaning</th><th>Examples</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Lvalue</td><td>Has a persistent identity/name — you can take its address</td><td>A named variable: <code>x</code>, <code>arr[0]</code>, a dereferenced pointer <code>*p</code></td></tr>
+      <tr><td>Rvalue</td><td>Temporary, about to be destroyed — no persistent identity</td><td>A literal (<code>5</code>), the result of an expression (<code>a + b</code>), a temporary object (<code>Student("X")</code>)</td></tr>
+    </tbody>
+  </table>
+  <pre><code class="language-cpp">int x = 10;        // x is an lvalue; 10 is an rvalue (a temporary literal)
+int y = x + 5;         // x is an lvalue; (x + 5) is an rvalue — a temporary computed result
+
+// A simple mental test: can you take its address with &amp;?
+&amp;x;      // valid — x is an lvalue
+&amp;(x+5);   // COMPILE ERROR — (x+5) is a temporary rvalue with no persistent memory address</code></pre>
+
+  <h2>2. Rvalue References (<code>&amp;&amp;</code>)</h2>
+  <p>
+    C++11 introduced a new reference type, <code>&amp;&amp;</code>, that specifically binds ONLY to rvalues (temporaries) — this is the mechanism that lets a function distinguish "this argument is a temporary I can safely steal resources from" versus "this argument is a persistent object I must not modify destructively."
+  </p>
+  <pre><code class="language-cpp">int x = 10;
+
+int &amp;lref = x;          // regular lvalue reference — binds to the named variable x
+// int &amp;lref2 = 5;         // COMPILE ERROR — lvalue reference cannot bind to a temporary rvalue
+
+int &amp;&amp;rref = 5;             // rvalue reference — CAN bind to a temporary
+// int &amp;&amp;rref2 = x;            // COMPILE ERROR — rvalue reference cannot bind to a persistent lvalue
+
+cout &lt;&lt; rref;                     // 5 — the rvalue reference extends the temporary's lifetime, letting you use it</code></pre>
+
+  <h2>3. <code>std::move</code></h2>
+  <p>
+    <code>std::move(x)</code> does NOT actually move anything by itself — it's simply a cast that converts an lvalue into an rvalue reference, signaling to the compiler (and to whichever function receives it) "treat this object as disposable; you may steal its internal resources rather than copying them."
+  </p>
+  <pre><code class="language-cpp">#include &lt;utility&gt;
+
+string a = "Hello";
+string b = std::move(a);   // b "steals" a's internal buffer instead of copying it — much faster for large strings
+
+cout &lt;&lt; b;                    // "Hello"
+cout &lt;&lt; a;                       // UNSPECIFIED — a is left in a "valid but unspecified" state after being moved from
+                                    // (often empty for strings/vectors, but this is NOT guaranteed by the standard —
+                                    // you should never rely on a moved-from object's specific value)</code></pre>
+  <p><strong>Critical rule:</strong> after moving from an object, you may still assign a new value to it or destroy it — but you must not rely on its current contents, since the standard only guarantees it's left in "some valid but unspecified state."</p>
+
+  <h2>4. Move Constructor</h2>
+  <p>
+    A move constructor initializes a new object by "stealing" the resources (e.g., a heap pointer) from a temporary or explicitly-moved source object, rather than performing a deep copy (Module 2.3). It takes an rvalue reference parameter.
+  </p>
+  <pre><code class="language-cpp">class IntArray {
+    public:
+        int *data;
+        int size;
+
+        // Regular (deep) copy constructor — expensive, allocates new memory and copies every element
+        IntArray(const IntArray &amp;other) : size(other.size) {
+            cout &lt;&lt; "Copy constructor (expensive)" &lt;&lt; endl;
+            data = new int[size];
+            for (int i = 0; i &lt; size; i++) data[i] = other.data[i];
+        }
+
+        // Move constructor — cheap, just steals the pointer, no allocation or copying at all
+        IntArray(IntArray &amp;&amp;other) noexcept : data(other.data), size(other.size) {
+            cout &lt;&lt; "Move constructor (cheap)" &lt;&lt; endl;
+            other.data = nullptr;   // CRITICAL — null out the source so its destructor doesn't free OUR stolen memory
+            other.size = 0;
+        }
+
+        IntArray(int s) : size(s) {
+            data = new int[size];
+        }
+
+        ~IntArray() {
+            delete[] data;   // safe even if data is nullptr — delete on nullptr is a guaranteed no-op
+        }
+};
+
+int main() {
+    IntArray a(1000000);          // large array
+    IntArray b = a;                    // COPY constructor — expensive, duplicates 1,000,000 ints
+    IntArray c = std::move(a);            // MOVE constructor — cheap, just steals the pointer, O(1)
+
+    return 0;
+}</code></pre>
+
+  <p><strong>Why <code>other.data = nullptr;</code> is essential:</strong> without it, both <code>c.data</code> and the moved-from <code>a.data</code> would point to the SAME memory block — when both destructors eventually run, this becomes a double-free (exactly the shallow-copy bug from Module 2.3, but through a different mechanism). Nulling out the source prevents its destructor from freeing memory that's now owned elsewhere.</p>
+
+  <h2>5. Move Assignment Operator</h2>
+  <pre><code class="language-cpp">class IntArray {
+    public:
+        int *data;
+        int size;
+
+        // ... constructors as above ...
+
+        // Move assignment operator
+        IntArray&amp; operator=(IntArray &amp;&amp;other) noexcept {
+            if (this == &amp;other) return *this;   // self-move-assignment guard
+
+            delete[] data;              // free THIS object's existing resource first
+
+            data = other.data;             // steal the pointer
+            size = other.size;
+            other.data = nullptr;             // null out the source
+            other.size = 0;
+
+            return *this;
+        }
+};
+
+int main() {
+    IntArray a(100), b(50);
+    b = std::move(a);   // move ASSIGNMENT (b already exists) — steals a's memory, frees b's old memory first
+    return 0;
+}</code></pre>
+
+  <h2>6. Why <code>noexcept</code> Matters for Move Operations</h2>
+  <p>
+    Move constructors/assignment operators should be marked <code>noexcept</code> whenever possible. STL containers like <code>vector</code> check this: during a reallocation (Module 4.1/4.8), <code>vector</code> will only use the (fast) move constructor if it's guaranteed not to throw — otherwise, it falls back to the (slower but safer) copy constructor, since a failure mid-move could leave the vector in a corrupted, half-moved state with no way to safely roll back.
+  </p>
+
+  <h2>7. When Does the Compiler Automatically Choose Move Over Copy?</h2>
+  <pre><code class="language-cpp">IntArray makeArray() {
+    IntArray temp(100);
+    return temp;   // temp is about to be destroyed anyway — compiler automatically MOVES it out
+                       // (or elides the copy/move entirely — see Move & Copy Rules, Module 5.5)
+}
+
+int main() {
+    IntArray a = makeArray();       // move constructor used (or elided) — NOT a full deep copy
+    IntArray b(50);
+    b = makeArray();                    // move ASSIGNMENT used — makeArray()'s return value is a temporary (rvalue)
+    IntArray c = a;                        // COPY constructor used — a is a persistent lvalue, not a temporary
+    return 0;
+}</code></pre>
+  <p>The compiler automatically prefers the move constructor/assignment whenever the source is an rvalue (a temporary, or something explicitly wrapped in <code>std::move</code>) — you only need <code>std::move</code> explicitly when working with a named variable (an lvalue) that you want to treat as disposable.</p>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain the difference between an lvalue and an rvalue, with your own examples of each.</li>
+    <li>What does <code>std::move()</code> actually do — and why is calling it, by itself, NOT the thing that performs the move?</li>
+    <li>Why must a move constructor null out the source object's pointer after stealing it? What bug would occur if it didn't?</li>
+    <li>Why do STL containers like <code>vector</code> require move constructors to be marked <code>noexcept</code> to actually use them during reallocation?</li>
+    <li>Explain why an object should not be relied upon for its specific value after being moved from, even though it remains in a "valid" state.</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Implement a <code>Buffer</code> class managing a raw <code>char*</code>, with both a deep copy constructor and a move constructor. Add print statements in each to demonstrate which one gets called in different scenarios.</li>
+    <li>Write a program demonstrating the performance difference conceptually: create a large <code>IntArray</code>, then time (or just annotate in comments) the difference between copying it and moving it.</li>
+    <li>Implement a move assignment operator for a class managing a dynamically allocated array, including the self-move-assignment guard and correctly freeing the destination's prior resource.</li>
+    <li>Write a function that returns a large object by value, and demonstrate (with print statements in the move constructor) that the compiler uses the move constructor rather than the copy constructor when the return value is assigned to a new variable.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

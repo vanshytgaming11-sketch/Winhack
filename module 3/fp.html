@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 3.4 — Function Pointers — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="function-pointers">
+  <h1>Module 3.4 — Function Pointers</h1>
+  <p>
+    Just as a pointer can store the address of a variable, a function pointer can store the address of a function — allowing functions to be passed as arguments, stored in variables, and called indirectly. This is foundational to the callback pattern used throughout C and lower-level C++ code (and conceptually connects directly to lambdas and <code>std::function</code> in Module 5).
+  </p>
+
+  <h2>1. Basic Syntax</h2>
+  <pre><code class="language-cpp">int add(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    int (*funcPtr)(int, int) = add;   // funcPtr stores the ADDRESS of the add function
+
+    cout &lt;&lt; funcPtr(3, 4);              // calls add(3, 4) indirectly through the pointer → 7
+    cout &lt;&lt; (*funcPtr)(3, 4);             // equivalent, more explicit dereference syntax → 7
+    return 0;
+}</code></pre>
+
+  <p><strong>Reading the declaration:</strong> <code>int (*funcPtr)(int, int)</code> — <code>funcPtr</code> is a pointer to a function that takes two <code>int</code>s and returns an <code>int</code>. The parentheses around <code>*funcPtr</code> are mandatory — without them, <code>int *funcPtr(int, int)</code> would instead declare a function that <em>returns</em> an <code>int*</code>, which is a completely different meaning.</p>
+
+  <h2>2. Assigning Different Functions to the Same Pointer</h2>
+  <pre><code class="language-cpp">int add(int a, int b) { return a + b; }
+int subtract(int a, int b) { return a - b; }
+int multiply(int a, int b) { return a * b; }
+
+int main() {
+    int (*operation)(int, int);
+
+    operation = add;
+    cout &lt;&lt; operation(5, 3) &lt;&lt; endl; // 8
+
+    operation = subtract;
+    cout &lt;&lt; operation(5, 3) &lt;&lt; endl;   // 2
+
+    operation = multiply;
+    cout &lt;&lt; operation(5, 3) &lt;&lt; endl;     // 15
+    return 0;
+}</code></pre>
+  <p>This is the essence of function pointers' power: the same variable, and the same calling code, can dynamically invoke completely different logic depending on which function it currently points to.</p>
+
+  <h2>3. Passing Functions as Arguments (Callbacks)</h2>
+  <p>
+    A common and powerful pattern: pass a function pointer as a parameter, so a general-purpose function can call back into custom, caller-supplied logic.
+  </p>
+  <pre><code class="language-cpp">int add(int a, int b) { return a + b; }
+int multiply(int a, int b) { return a * b; }
+
+// `operation` is a function pointer parameter — accepts ANY function matching int(int, int)
+int compute(int x, int y, int (*operation)(int, int)) {
+    return operation(x, y);
+}
+
+int main() {
+    cout &lt;&lt; compute(4, 5, add) &lt;&lt; endl;         // 9 — add is passed AS a value (its address)
+    cout &lt;&lt; compute(4, 5, multiply) &lt;&lt; endl;       // 20
+    return 0;
+}</code></pre>
+
+  <h3>A Practical Example — Custom Sort Comparator</h3>
+  <pre><code class="language-cpp">#include &lt;algorithm&gt;
+#include &lt;vector&gt;
+using namespace std;
+
+bool descending(int a, int b) {
+    return a &gt; b;   // returning true means "a should come before b"
+}
+
+int main() {
+    vector&lt;int&gt; nums = {5, 2, 8, 1, 9};
+    sort(nums.begin(), nums.end(), descending);  // passing a function pointer as the comparator
+
+    for (int n : nums) cout &lt;&lt; n &lt;&lt; " ";  // 9 8 5 2 1
+    return 0;
+}</code></pre>
+  <p>This exact pattern — passing a function (or, in modern code, a lambda) as a comparator — is used constantly throughout STL algorithms in Module 4.7.</p>
+
+  <h2>4. Arrays of Function Pointers</h2>
+  <p>Useful for building simple dispatch tables (e.g., menu-driven programs, simple calculators):</p>
+  <pre><code class="language-cpp">int add(int a, int b) { return a + b; }
+int subtract(int a, int b) { return a - b; }
+int multiply(int a, int b) { return a * b; }
+
+int main() {
+    int (*operations[3])(int, int) = {add, subtract, multiply};
+
+    int choice = 1; // 0=add, 1=subtract, 2=multiply
+    cout &lt;&lt; operations[choice](10, 4); // 6 (subtract)
+    return 0;
+}</code></pre>
+
+  <h2>5. <code>typedef</code> / <code>using</code> for Readability</h2>
+  <p>Function pointer syntax is notoriously hard to read — type aliases make it much cleaner:</p>
+  <pre><code class="language-cpp">typedef int (*Operation)(int, int);       // C-style alias
+using OperationAlias = int(*)(int, int);   // modern C++11+ alias (preferred)
+
+int add(int a, int b) { return a + b; }
+
+int compute(int x, int y, Operation op) {   // MUCH more readable parameter type
+    return op(x, y);
+}
+
+int main() {
+    Operation op = add;
+    cout &lt;&lt; compute(3, 4, op); // 7
+    return 0;
+}</code></pre>
+
+  <h2>6. Function Pointers vs Modern Alternatives (preview)</h2>
+  <p>
+    Function pointers are the low-level foundation for callbacks, but modern C++ (Module 5.2, 5.7) offers more flexible alternatives: <strong>lambdas</strong> (anonymous inline functions, often capturing surrounding variables) and <code>std::function</code> (a general-purpose wrapper that can hold a function pointer, lambda, or any callable object). Raw function pointers cannot capture surrounding state the way lambdas can — this is their main limitation.
+  </p>
+  <pre><code class="language-cpp">// Preview — Module 5.2 covers this in full depth
+#include &lt;functional&gt;
+function&lt;int(int,int)&gt; op = [](int a, int b) { return a + b; }; // lambda stored in std::function
+cout &lt;&lt; op(3, 4); // 7</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why the parentheses in <code>int (*funcPtr)(int, int)</code> are necessary — what would <code>int *funcPtr(int, int)</code> mean instead?</li>
+    <li>What is the "callback" pattern, and why are function pointers useful for implementing it?</li>
+    <li>What limitation do raw function pointers have compared to lambdas, particularly regarding captured state?</li>
+  </ol>
+
+  <h3>Predict the Output</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">int square(int x) { return x * x; }
+int cube(int x) { return x * x * x; }
+
+int apply(int x, int (*f)(int)) {
+    return f(x);
+}
+
+int main() {
+    cout &lt;&lt; apply(3, square) &lt;&lt; " " &lt;&lt; apply(3, cube);
+}</code></pre>
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function <code>int calculate(int a, int b, int (*op)(int, int))</code> and define four functions (add, subtract, multiply, divide) to pass into it based on user menu choice.</li>
+    <li>Write a program with an array of function pointers representing at least 3 different string-transformation functions (e.g., uppercase, reverse, count vowels), and call each based on user selection.</li>
+    <li>Write a function <code>void applyToArray(int arr[], int size, void (*func)(int&amp;))</code> that applies a given function to every element of an array in place. Demonstrate with a function that doubles each element.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.4 — Stack &amp; Queue Techniques — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="stack-queue-techniques">
+  <h1>Module 6.4 — Stack &amp; Queue Techniques</h1>
+  <p>
+    Module 4.3 covered <code>stack</code>, <code>queue</code>, and <code>priority_queue</code> as STL container adaptors. This module covers the specific algorithmic techniques built on top of them — most importantly the <strong>monotonic stack</strong>, plus common queue-based patterns using <code>deque</code>.
+  </p>
+
+  <h2>1. Monotonic Stack</h2>
+  <p>
+    A monotonic stack maintains its elements in strictly increasing or strictly decreasing order at all times — whenever a new element would violate that order, elements are popped off until the order is restored, then the new element is pushed. This pattern efficiently solves a whole family of "next greater/smaller element" problems in O(n) instead of the O(n²) brute force.
+  </p>
+
+  <h3>Next Greater Element</h3>
+  <p>For each element, find the next element to its right that is strictly greater — or -1 if none exists.</p>
+  <pre><code class="language-cpp">vector&lt;int&gt; nextGreaterElement(vector&lt;int&gt; &amp;arr) {
+    int n = arr.size();
+    vector&lt;int&gt; result(n, -1);
+    stack&lt;int&gt; st;   // stores INDICES, maintained in DECREASING order of their VALUES
+
+    for (int i = 0; i &lt; n; i++) {
+        // While current element is greater than the element at the index on top of the stack,
+        // we've found that top element's "next greater" — pop it and record the answer
+        while (!st.empty() &amp;&amp; arr[i] &gt; arr[st.top()]) {
+            result[st.top()] = arr[i];
+            st.pop();
+        }
+        st.push(i);
+    }
+    // Any indices remaining on the stack at the end have NO next greater element — result stays -1
+    return result;
+}
+// O(n) time — even though there's a while loop inside a for loop, each index is pushed
+// exactly once and popped AT MOST once across the entire run — same amortized reasoning as
+// the sliding window's nested loop in Module 6.2.
+
+// Example trace: arr = {2, 1, 2, 4, 3}
+// result       = {4, 2, 4, -1, -1}</code></pre>
+
+  <h3>Why a Naive Approach Is O(n²)</h3>
+  <pre><code class="language-cpp">// Brute force — for EACH element, scan RIGHT until a greater one is found
+vector&lt;int&gt; nextGreaterBrute(vector&lt;int&gt; &amp;arr) {
+    int n = arr.size();
+    vector&lt;int&gt; result(n, -1);
+    for (int i = 0; i &lt; n; i++) {
+        for (int j = i + 1; j &lt; n; j++) {
+            if (arr[j] &gt; arr[i]) {
+                result[i] = arr[j];
+                break;
+            }
+        }
+    }
+    return result;
+}
+// O(n²) worst case — the monotonic stack approach above achieves the SAME result in O(n)
+// by avoiding redundant re-scanning: each element is examined a constant number of times total.</code></pre>
+
+  <h3>Daily Temperatures (a very common variant)</h3>
+  <pre><code class="language-cpp">// For each day, find how many days until a WARMER temperature — same monotonic stack pattern
+vector&lt;int&gt; dailyTemperatures(vector&lt;int&gt; &amp;temps) {
+    int n = temps.size();
+    vector&lt;int&gt; result(n, 0);
+    stack&lt;int&gt; st;   // stores indices
+
+    for (int i = 0; i &lt; n; i++) {
+        while (!st.empty() &amp;&amp; temps[i] &gt; temps[st.top()]) {
+            int idx = st.top();
+            st.pop();
+            result[idx] = i - idx;   // DISTANCE (in days), not the value itself
+        }
+        st.push(i);
+    }
+    return result;
+}
+// O(n) time — same monotonic stack pattern, just tracking distance instead of the value</code></pre>
+
+  <h3>Largest Rectangle in Histogram (classic advanced monotonic stack problem)</h3>
+  <pre><code class="language-cpp">int largestRectangleArea(vector&lt;int&gt; &amp;heights) {
+    stack&lt;int&gt; st;   // maintains indices of bars in INCREASING height order
+    int maxArea = 0;
+    heights.push_back(0);   // sentinel — forces the stack to fully empty by the end, simplifying the code
+
+    for (int i = 0; i &lt; heights.size(); i++) {
+        while (!st.empty() &amp;&amp; heights[i] &lt; heights[st.top()]) {
+            int height = heights[st.top()];
+            st.pop();
+            int width = st.empty() ? i : i - st.top() - 1;
+            maxArea = max(maxArea, height * width);
+        }
+        st.push(i);
+    }
+    return maxArea;
+}
+// O(n) time — a more advanced application of the same monotonic stack idea</code></pre>
+
+  <h2>2. Monotonic Stack — Recognizing When to Use It</h2>
+  <p>The monotonic stack pattern applies whenever a problem asks, for each element, about the <strong>nearest</strong> element satisfying some comparison (greater, smaller, or a derived property like "nearest bar tall enough") to its left or right — this is the signal to reach for it instead of brute-force nested loops.</p>
+
+  <h2>3. Monotonic Queue (Sliding Window Maximum)</h2>
+  <p>
+    A monotonic <strong>deque</strong> solves the "maximum in every sliding window of size K" problem in O(n), by maintaining indices in decreasing order of their values, and discarding indices that fall outside the current window or that can never be the maximum again.
+  </p>
+  <pre><code class="language-cpp">vector&lt;int&gt; maxSlidingWindow(vector&lt;int&gt; &amp;arr, int k) {
+    deque&lt;int&gt; dq;   // stores INDICES, values at those indices are kept in DECREASING order
+    vector&lt;int&gt; result;
+
+    for (int i = 0; i &lt; arr.size(); i++) {
+        // Remove indices that have fallen out of the current window (out the LEFT side)
+        if (!dq.empty() &amp;&amp; dq.front() &lt;= i - k) {
+            dq.pop_front();
+        }
+
+        // Remove indices from the BACK whose values are smaller than the current element —
+        // they can NEVER be the max while arr[i] is still in the window, so they're useless
+        while (!dq.empty() &amp;&amp; arr[dq.back()] &lt; arr[i]) {
+            dq.pop_back();
+        }
+
+        dq.push_back(i);
+
+        if (i &gt;= k - 1) {           // window has reached full size — record the current max
+            result.push_back(arr[dq.front()]);   // front always holds the max for the current window
+        }
+    }
+    return result;
+}
+// O(n) time — each index is pushed once and popped at most once, same amortized reasoning as before
+// Compare to the brute-force approach of recomputing the max for every window: O(n*k)</code></pre>
+
+  <h2>4. Queue-Based BFS (preview — full depth in Module 6.8)</h2>
+  <p>
+    While covered fully in Graphs (6.8), it's worth noting here: a plain <code>queue</code> (not monotonic) is the core data structure for BFS traversal — processing nodes in the order they were discovered, level by level. This connects directly back to Module 4.3's basic <code>queue</code> usage.
+  </p>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why the "next greater element" solution using a monotonic stack is O(n), even though it contains a nested while loop.</li>
+    <li>What signal in a problem statement suggests a monotonic stack is the right approach, as opposed to a plain stack or a different technique?</li>
+    <li>In the sliding window maximum problem, explain why elements smaller than the current one can be safely discarded from the back of the deque.</li>
+    <li>Why is the front of the monotonic deque always the maximum of the current window, without needing to scan the whole window?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function using a monotonic stack to find the "next smaller element" for each element in an array (mirror image of "next greater element").</li>
+    <li>Write a function to find, for each element in an array, the index of the previous greater element to its LEFT (a common variant direction).</li>
+    <li>Implement the sliding window minimum (mirror of sliding window maximum) using a monotonic deque.</li>
+    <li>Write a function using a monotonic stack to solve the "Trapping Rain Water" problem — given an array of bar heights, compute how much water is trapped between them.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Certificate of completion — WinHack</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="cert-light">
+  <a class="cert-back" href="index.html">← Back to WinHack</a>
+  <article class="certificate" id="certificateCard">
+    <p class="cert-kicker">Certificate of completion</p>
+    <h1>WinHack</h1>
+    <p class="cert-line">This is to certify that</p>
+    <p class="cert-name" id="cName">—</p>
+    <p class="cert-line">has successfully completed the <strong>C++ + DSA Interview Prep</strong> course and passed the WinHack certificate examination with more than 15 correct answers.</p>
+    <p class="cert-score" id="cScore"></p>
+    <div class="cert-meta">
+      <div>
+        <span>Given by</span>
+        <strong>WinHack</strong>
+      </div>
+      <div>
+        <span>Date</span>
+        <strong id="cDate">—</strong>
+      </div>
+      <div>
+        <span>Certificate ID</span>
+        <strong id="cId">—</strong>
+      </div>
+    </div>
+    <p class="cert-sign">Vansh Yadav · Founder</p>
+    <p class="cert-contact">+919654339303 · vanshytgaming11@gmail.com</p>
+  </article>
+  <p class="cert-empty" id="certEmpty" hidden>No certificate yet. Complete the course and pass the exam first.</p>
+  <div class="cert-actions" id="certActions" hidden>
+    <button type="button" class="btn" id="printCert">Print / save PDF</button>
+  </div>
+  <footer class="site-footer cert-footer">
+    <div class="footer-inner">
+      <p class="footer-brand">WinHack</p>
+      <p>Made by <strong>Vansh Yadav</strong>. Certificates are given by WinHack.</p>
+      <p><a href="tel:+919654339303">+919654339303</a> · <a href="mailto:vanshytgaming11@gmail.com">vanshytgaming11@gmail.com</a></p>
+      <p class="footer-copy">© 2026 WinHack. All rights reserved.</p>
+    </div>
+  </footer>
+  <script src="progress.js"></script>
+  <script>
+    (function () {
+      const cert = Winhack.getCert();
+      if (!cert) {
+        document.getElementById("certificateCard").hidden = true;
+        document.getElementById("certEmpty").hidden = false;
+        return;
+      }
+      document.getElementById("cName").textContent = cert.name;
+      document.getElementById("cScore").textContent = "Score " + cert.score + " / " + cert.total;
+      document.getElementById("cDate").textContent = new Date(cert.date).toLocaleDateString(undefined, {
+        year: "numeric", month: "long", day: "numeric"
+      });
+      document.getElementById("cId").textContent = cert.id;
+      document.getElementById("certActions").hidden = false;
+      document.getElementById("printCert").addEventListener("click", function () {
+        window.print();
+      });
+    })();
+  </script>
+</body>
+</html>

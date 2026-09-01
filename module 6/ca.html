@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.1 — Complexity Analysis — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="complexity-analysis">
+  <h1>Module 6.1 — Complexity Analysis</h1>
+  <p>
+    Every DSA topic from here forward is evaluated by its time and space complexity — this module formalizes the notation and reasoning you'll apply throughout Module 6. If Modules 1–5 were about writing correct C++, Module 6 is about writing <em>efficient</em> C++, and complexity analysis is the language used to reason about efficiency precisely.
+  </p>
+
+  <h2>1. What Is Big-O Notation?</h2>
+  <p>
+    Big-O describes how an algorithm's running time (or memory usage) grows as the input size <code>n</code> grows large — it captures the <strong>growth rate</strong>, deliberately ignoring constant factors and lower-order terms, because those become irrelevant compared to the dominant term as <code>n</code> gets large.
+  </p>
+  <pre><code class="language-cpp">// This loop does exactly n iterations — its time complexity is O(n)
+for (int i = 0; i &lt; n; i++) {
+    cout &lt;&lt; i;
+}
+
+// This does 3n + 5 operations, but Big-O DROPS constants and lower-order terms:
+for (int i = 0; i &lt; n; i++) {
+    cout &lt;&lt; i;      // n times
+    cout &lt;&lt; i * 2;   // n times
+    cout &lt;&lt; i * 3;   // n times
+}
+cout &lt;&lt; "done" &lt;&lt; endl; // +5 fixed operations
+// Total: 3n + 5 operations — but this is STILL described as O(n), not O(3n+5),
+// because as n grows huge, the constant factor 3 and the +5 become insignificant
+// compared to the fact that work scales LINEARLY with n.</code></pre>
+
+  <h2>2. Common Complexity Classes (from best to worst)</h2>
+  <table>
+    <thead>
+      <tr><th>Notation</th><th>Name</th><th>Example</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>O(1)</td><td>Constant</td><td>Array access by index, hash map lookup (average case)</td></tr>
+      <tr><td>O(log n)</td><td>Logarithmic</td><td>Binary search, balanced BST operations</td></tr>
+      <tr><td>O(n)</td><td>Linear</td><td>Single loop through an array, linear search</td></tr>
+      <tr><td>O(n log n)</td><td>Linearithmic</td><td>Efficient sorting (merge sort, quicksort average case)</td></tr>
+      <tr><td>O(n²)</td><td>Quadratic</td><td>Nested loops over the same input, bubble sort</td></tr>
+      <tr><td>O(2ⁿ)</td><td>Exponential</td><td>Naive recursive Fibonacci, generating all subsets</td></tr>
+      <tr><td>O(n!)</td><td>Factorial</td><td>Generating all permutations, brute-force traveling salesman</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Visualizing Growth Rates</h3>
+  <pre><code>n = 10:
+  O(1)       = 1
+  O(log n)   ≈ 3
+  O(n)       = 10
+  O(n log n) ≈ 33
+  O(n²)      = 100
+  O(2ⁿ)      = 1024
+
+n = 20:
+  O(1)       = 1
+  O(log n)   ≈ 4
+  O(n)       = 20
+  O(n log n) ≈ 86
+  O(n²)      = 400
+  O(2ⁿ)      = 1,048,576   ← already exploding at n=20!</code></pre>
+  <p>This is why exponential algorithms are only practical for very small inputs — the naive recursive Fibonacci from Module 1.3 becomes unusably slow well before n reaches 40.</p>
+
+  <h2>3. Determining Complexity — Rules of Thumb</h2>
+
+  <h3>Sequential statements — ADD complexities</h3>
+  <pre><code class="language-cpp">for (int i = 0; i &lt; n; i++) { ... }   // O(n)
+for (int i = 0; i &lt; n; i++) { ... }     // O(n)
+// Total: O(n) + O(n) = O(2n) = O(n)  — constants dropped</code></pre>
+
+  <h3>Nested loops (over the same input) — MULTIPLY complexities</h3>
+  <pre><code class="language-cpp">for (int i = 0; i &lt; n; i++) {
+    for (int j = 0; j &lt; n; j++) {
+        cout &lt;&lt; i * j;
+    }
+}
+// Outer loop: n iterations. Inner loop: n iterations EACH TIME.
+// Total: n * n = O(n²)</code></pre>
+
+  <h3>Independent (non-nested) loops over different inputs — ADD, don't multiply</h3>
+  <pre><code class="language-cpp">for (int i = 0; i &lt; n; i++) { ... }    // O(n)
+for (int j = 0; j &lt; m; j++) { ... }      // O(m) — a DIFFERENT input size
+// Total: O(n + m) — NOT O(n * m), since these are sequential, not nested</code></pre>
+
+  <h3>Loop with a shrinking/growing step — often logarithmic</h3>
+  <pre><code class="language-cpp">int i = n;
+while (i &gt; 1) {
+    i = i / 2;   // halves each time — how many times can you halve n before reaching 1?
+    cout &lt;&lt; i;
+}
+// Total: O(log n) — the number of halvings needed to go from n down to 1</code></pre>
+
+  <h3>Recursive calls — analyze via the recursion tree</h3>
+  <pre><code class="language-cpp">int factorial(int n) {
+    if (n &lt;= 1) return 1;
+    return n * factorial(n - 1);
+}
+// One recursive call per level, n levels deep → O(n)
+
+int fib(int n) {
+    if (n &lt;= 1) return n;
+    return fib(n-1) + fib(n-2);
+}
+// TWO recursive calls per level → the call tree branches exponentially → O(2^n)</code></pre>
+
+  <h2>4. Best, Average, and Worst Case</h2>
+  <p>
+    Many algorithms have different complexities depending on the specific input, not just its size. Big-O by convention usually refers to the <strong>worst case</strong> unless stated otherwise, but distinguishing all three matters for real interview discussions.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Case</th><th>Meaning</th><th>Example — Linear Search</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Best case</td><td>The most favorable input — fastest possible run</td><td>Target is the FIRST element checked → O(1)</td></tr>
+      <tr><td>Average case</td><td>Expected performance over typical/random inputs</td><td>Target is somewhere in the middle, on average → O(n/2) → simplifies to O(n)</td></tr>
+      <tr><td>Worst case</td><td>The most unfavorable input — slowest possible run</td><td>Target is the LAST element, or absent entirely → O(n)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>A Concrete Example — Quicksort</h3>
+  <pre><code>Best/Average case:  O(n log n)  — pivot splits the array roughly in half each time
+Worst case:          O(n²)        — pivot is always the smallest/largest element
+                                      (e.g., an already-sorted array with a naive pivot choice),
+                                      causing maximally unbalanced partitions every time</code></pre>
+  <p>This exact best-vs-worst-case gap is why quicksort's pivot selection strategy matters in practice, and why some libraries use hybrid approaches (like introsort, mentioned in Module 4.7) to guard against worst-case inputs.</p>
+
+  <h2>5. Space Complexity</h2>
+  <p>
+    Alongside time, algorithms are also measured by how much <strong>extra</strong> memory they use relative to input size (not counting the input itself, which is a fixed cost regardless of algorithm choice).
+  </p>
+  <pre><code class="language-cpp">// O(1) space — uses a fixed, constant amount of extra memory regardless of n
+int sum(vector&lt;int&gt; &amp;v) {
+    int total = 0;
+    for (int x : v) total += x;
+    return total;
+}
+
+// O(n) space — allocates memory proportional to n
+vector&lt;int&gt; doubleAll(vector&lt;int&gt; &amp;v) {
+    vector&lt;int&gt; result;
+    for (int x : v) result.push_back(x * 2);
+    return result;
+}
+
+// O(n) space from the CALL STACK — recursion depth grows linearly with n (Module 1.3)
+int factorial(int n) {
+    if (n &lt;= 1) return 1;
+    return n * factorial(n - 1);   // n stack frames exist simultaneously at maximum depth
+}</code></pre>
+  <p>There is frequently a <strong>time-space trade-off</strong>: using extra memory (like a hash map for O(1) lookups, or memoization in DP — Module 6.10) often reduces time complexity significantly, at the cost of additional space.</p>
+
+  <h2>6. Why This Matters for Interviews</h2>
+  <p>
+    Every problem in Modules 6.2 onward will explicitly discuss the complexity of each approach — interviewers consistently expect you to state and justify the time/space complexity of any solution you propose, and to recognize when a brute-force O(n²) approach can be improved to O(n log n) or O(n) using better data structures or algorithmic patterns.
+  </p>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Why does Big-O notation drop constant factors and lower-order terms? Give an example where this simplification could mislead someone comparing two algorithms for small inputs.</li>
+    <li>Explain why nested loops over the same input multiply their complexities, while sequential loops add them.</li>
+    <li>Why is quicksort's average case O(n log n) but its worst case O(n²)? What specific input triggers the worst case with a naive pivot strategy?</li>
+    <li>Explain the time-space trade-off with a concrete example (other than memoization) where using more memory reduces time complexity.</li>
+    <li>Why does recursion generally have O(depth) space complexity, even if no extra data structure is explicitly allocated inside the function?</li>
+  </ol>
+
+  <h3>Analyze the Complexity</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">for (int i = 0; i &lt; n; i++) {
+    for (int j = i; j &lt; n; j++) {
+        cout &lt;&lt; i &lt;&lt; j;
+    }
+}</code></pre>
+      What is the time complexity? (Hint: it's not simply O(n²), though it IS still that order — explain why the inner loop's changing range doesn't change the overall class.)
+    </li>
+    <li>
+      <pre><code class="language-cpp">for (int i = 1; i &lt; n; i *= 2) {
+    cout &lt;&lt; i;
+}</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">void mystery(int n) {
+    if (n &lt;= 0) return;
+    cout &lt;&lt; n;
+    mystery(n / 2);
+    mystery(n / 2);
+}</code></pre>
+      (Hint: draw the recursion tree — how many levels, and how many calls per level?)
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write two different implementations of a function checking whether an array contains duplicates: one O(n²) brute-force version (nested loops), and one O(n) version using a <code>set</code>. State each one's time and space complexity in a comment.</li>
+    <li>Write a recursive function to compute the sum of digits of a number, and state its time complexity in terms of the number of digits.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

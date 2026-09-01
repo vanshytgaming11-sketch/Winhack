@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 7.3 — Weak-Area Review — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="weak-area-review">
+  <h1>Module 7.3 — Weak-Area Review</h1>
+  <p>
+    This module has no new problems of its own — it's a structured process for turning the raw signal from Modules 7.1 and 7.2 (which patterns you struggled with, which follow-ups you fumbled) into a targeted return to the specific Module 6 sub-topics that need reinforcement, rather than re-reviewing everything evenly.
+  </p>
+
+  <h2>1. Why Targeted Review Beats Re-Reading Everything</h2>
+  <p>
+    Re-reading all of Module 6 from the start wastes time on topics you've already internalized, and — worse — gives a false sense of thoroughness without actually closing the gaps that matter. A weak-area review process directly uses your mock interview logs (Module 7.2, section 5) to decide where to spend time.
+  </p>
+
+  <h2>2. Building a Weak-Area Map</h2>
+  <p>After several mock interviews and practice sets, tabulate results by Module 6 sub-topic:</p>
+  <table>
+    <thead>
+      <tr><th>Module 6 sub-topic</th><th>Problems attempted</th><th>Pattern ID'd correctly (first try)</th><th>Reached optimal complexity</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>6.2 Arrays &amp; Strings</td><td>e.g., 5</td><td>e.g., 4/5</td><td>e.g., 4/5</td><td>Strong</td></tr>
+      <tr><td>6.8 Graphs</td><td>e.g., 4</td><td>e.g., 1/4</td><td>e.g., 1/4</td><td>WEAK — priority for review</td></tr>
+      <tr><td>6.10 Dynamic Programming</td><td>e.g., 4</td><td>e.g., 2/4</td><td>e.g., 1/4</td><td>WEAK — priority for review</td></tr>
+      <tr><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Rule of thumb:</strong> any sub-topic where pattern identification succeeded less than ~60% of the time on first attempt is a priority — this is a recognition gap, not just a syntax gap, and recognition gaps are what actually fail interviews (you can look up syntax; you can't look up "which pattern applies" mid-interview).</p>
+
+  <h2>3. The Review Cycle for Each Weak Sub-Topic</h2>
+  <ol>
+    <li><strong>Re-read the relevant Module 6 sub-topic in full</strong> — not skimmed, since a gap in recognition often traces back to an incompletely internalized "why" (e.g., why a monotonic stack is O(n) despite the nested loop — Module 6.4).</li>
+    <li><strong>Re-solve the original practice questions</strong> for that sub-topic from memory, without looking at your previous solution.</li>
+    <li><strong>Solve 2–3 NEW problems</strong> on the same pattern (from an external source, since this course's practice sets are now familiar) to confirm the gap is actually closed, not just that you memorized the specific earlier problem's answer.</li>
+    <li><strong>Re-attempt one mixed practice set</strong> (Module 7.1) that included this pattern among others, to verify you can now recognize it correctly WITHOUT being told in advance which sub-topic it belongs to.</li>
+  </ol>
+
+  <h2>4. Common Root Causes Behind Recurring Weak Areas</h2>
+  <table>
+    <thead>
+      <tr><th>Symptom</th><th>Likely root cause</th><th>Where to revisit</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Correctly identifies "this is a graph problem" but picks BFS when DFS (or vice versa) was needed</td><td>Hasn't internalized the DFS vs BFS decision table</td><td>Module 6.8, section 4</td></tr>
+      <tr><td>Writes a correct but O(n²) DP solution, misses the O(n) or O(n log n) optimization</td><td>Recognizes the DP pattern but hasn't practiced space/time optimization on top of it</td><td>Module 6.10, section 3 (space-optimized tabulation)</td></tr>
+      <tr><td>Solves the "normal" version of a pattern but fails when duplicates/edge cases are introduced</td><td>Learned the pattern's happy path without the edge-case handling that usually accompanies it</td><td>Revisit the SAME sub-topic's practice questions, focusing specifically on edge cases this time</td></tr>
+      <tr><td>Can explain the approach but the implementation has bugs (off-by-one, wrong pointer update)</td><td>Conceptual understanding is fine — this is a mechanics/practice gap, not a recognition gap</td><td>More timed coding reps of the SAME pattern, not more reading</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. When a Weak Area Is Actually Fixed</h2>
+  <p>Consider a sub-topic genuinely reinforced (not just "reviewed") when, across at least 3 NEW mixed-context problems:</p>
+  <ul>
+    <li>The pattern is identified within the first few minutes, without hesitation.</li>
+    <li>The optimal (or near-optimal) time/space complexity is reached on the first attempt, not after a hint or a second pass.</li>
+    <li>Edge cases are anticipated proactively, before being pointed out.</li>
+    <li>The approach can be explained clearly out loud in under a minute.</li>
+  </ul>
+  <p>If any of these still fail after one full review cycle, repeat the cycle rather than moving on — a pattern that's still shaky after one pass is a signal to spend more time, not less.</p>
+
+  <h2>Practice Questions</h2>
+  <p>This sub-topic's "practice" is the review cycle itself, applied to whichever Module 6 sub-topics your own mock interview logs identify as weak. There is no fixed problem set here by design — the entire point is that the problems worked on are determined by your own diagnostic data, not a generic list.</p>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

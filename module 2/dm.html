@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 2.1 — Dynamic Memory — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="dynamic-memory">
+  <h1>Module 2.1 — Dynamic Memory</h1>
+  <p>
+    So far, all variables have lived on the <strong>stack</strong> — memory automatically managed by the compiler, allocated when a variable comes into scope and freed when it goes out of scope. C++ also allows explicit, manual control over a second memory region called the <strong>heap</strong>, using <code>new</code> and <code>delete</code>. This gives you memory that persists beyond the function that created it — but with that power comes full responsibility for cleaning it up.
+  </p>
+
+  <h2>1. Stack vs Heap</h2>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>Stack</th><th>Heap</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Allocation</td><td>Automatic (compiler-managed)</td><td>Manual (<code>new</code> / <code>delete</code>)</td></tr>
+      <tr><td>Lifetime</td><td>Tied to scope — destroyed when block/function exits</td><td>Persists until explicitly <code>delete</code>d</td></tr>
+      <tr><td>Speed</td><td>Very fast (just pointer bump)</td><td>Slower (involves memory manager bookkeeping)</td></tr>
+      <tr><td>Size</td><td>Limited (typically a few MB, fixed at program start)</td><td>Much larger, limited by available system memory</td></tr>
+      <tr><td>Management</td><td>Automatic — no leaks possible</td><td>Manual — leaks and dangling pointers possible if mismanaged</td></tr>
+      <tr><td>Typical use</td><td>Local variables, function parameters</td><td>Data whose size/lifetime isn't known at compile time</td></tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-cpp">void demo() {
+    int a = 10;          // STACK — destroyed automatically when demo() returns
+    int *p = new int(20); // HEAP — the int(20) persists after demo() returns,
+                            // UNLESS explicitly deleted (memory leak if forgotten)
+}</code></pre>
+
+  <h2>2. Allocating Memory with <code>new</code></h2>
+  <pre><code class="language-cpp">int *p = new int;        // allocates a single uninitialized int on the heap
+int *p2 = new int(42);     // allocates and initializes to 42
+int *p3 = new int{42};      // brace-initialization (C++11+, preferred — prevents narrowing)
+
+cout &lt;&lt; *p2;                   // 42
+
+double *d = new double(3.14);
+cout &lt;&lt; *d;                       // 3.14</code></pre>
+
+  <p><code>new</code> returns a pointer to the newly allocated memory. Unlike a local variable, this memory does NOT disappear when the current function returns — it remains reserved until explicitly freed with <code>delete</code>.</p>
+
+  <h2>3. Freeing Memory with <code>delete</code></h2>
+  <pre><code class="language-cpp">int *p = new int(42);
+cout &lt;&lt; *p;    // 42
+delete p;        // frees the memory back to the system
+// p still holds the OLD address here — using *p now is undefined behavior (dangling pointer, see below)</code></pre>
+
+  <p><strong>Best practice — null the pointer after deleting:</strong></p>
+  <pre><code class="language-cpp">int *p = new int(42);
+delete p;
+p = nullptr; // now safe to check `if (p == nullptr)` before any future use</code></pre>
+
+  <h2>4. Dynamic Arrays</h2>
+  <pre><code class="language-cpp">int *arr = new int[5];         // allocates an array of 5 uninitialized ints on the heap
+int *arr2 = new int[5]{1,2,3,4,5}; // allocates and initializes (C++11+)
+int *arr3 = new int[5]();          // allocates and zero-initializes every element
+
+for (int i = 0; i &lt; 5; i++) {
+    arr[i] = i * 10;
+}
+
+for (int i = 0; i &lt; 5; i++) {
+    cout &lt;&lt; arr[i] &lt;&lt; " ";
+}
+// 0 10 20 30 40
+
+delete[] arr;   // MUST use delete[] (with brackets) for arrays — see below
+delete[] arr2;
+delete[] arr3;</code></pre>
+
+  <p><strong>Critical rule — matching <code>new</code>/<code>delete</code> forms:</strong></p>
+  <table>
+    <thead>
+      <tr><th>Allocated with</th><th>Must free with</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>new Type</code></td><td><code>delete ptr;</code></td></tr>
+      <tr><td><code>new Type[n]</code></td><td><code>delete[] ptr;</code></td></tr>
+    </tbody>
+  </table>
+  <pre><code class="language-cpp">int *arr = new int[10];
+delete arr;    // WRONG — using delete (no brackets) on an array is undefined behavior:
+                  // it may only destroy/free the first element's worth of memory,
+                  // leaking the rest, or corrupting the heap.
+delete[] arr;    // CORRECT</code></pre>
+
+  <h2>5. Dynamic 2D Arrays</h2>
+  <pre><code class="language-cpp">int rows = 3, cols = 4;
+
+// Allocate an array of row-pointers, then allocate each row separately
+int **matrix = new int*[rows];
+for (int i = 0; i &lt; rows; i++) {
+    matrix[i] = new int[cols];
+}
+
+// Use it like a normal 2D array
+for (int i = 0; i &lt; rows; i++) {
+    for (int j = 0; j &lt; cols; j++) {
+        matrix[i][j] = i * cols + j;
+    }
+}
+
+// MUST free in reverse order — each row first, then the row-pointer array
+for (int i = 0; i &lt; rows; i++) {
+    delete[] matrix[i];
+}
+delete[] matrix;</code></pre>
+  <p>Freeing <code>matrix</code> before freeing each <code>matrix[i]</code> would leak every row's memory, since you'd lose the only pointers referencing them.</p>
+
+  <h2>6. Memory Leaks</h2>
+  <p>
+    A memory leak occurs when heap memory is allocated but never freed, and the program loses all pointers to it — making it permanently unreachable and unrecoverable until the program exits.
+  </p>
+  <pre><code class="language-cpp">void leak() {
+    int *p = new int(5); // allocated
+    // function ends WITHOUT delete — p (the only reference to this memory) is destroyed,
+    // but the memory itself is NOT freed. This block is now leaked forever
+    // (until the OS reclaims it when the whole process exits).
+}
+
+int main() {
+    for (int i = 0; i &lt; 1000000; i++) {
+        leak(); // leaks a small block on every call — over time, this exhausts available memory
+    }
+    return 0;
+}</code></pre>
+
+  <p><strong>Another common leak — overwriting a pointer before freeing it:</strong></p>
+  <pre><code class="language-cpp">int *p = new int(10);
+p = new int(20);  // The original block (holding 10) is now leaked —
+                     // its address is gone, no way to delete it anymore
+delete p;             // only frees the SECOND allocation</code></pre>
+
+  <h2>7. Dangling Pointers</h2>
+  <p>
+    A dangling pointer is one that still holds the address of memory that has already been freed (via <code>delete</code>) or has otherwise gone out of scope. Dereferencing it is undefined behavior — it might crash, silently corrupt data, or appear to "work" while being fundamentally unsafe.
+  </p>
+  <pre><code class="language-cpp">int *p = new int(42);
+delete p;
+cout &lt;&lt; *p; // UNDEFINED BEHAVIOR — p is a dangling pointer, the memory it points to
+              // has been returned to the system and may be reused for something else</code></pre>
+
+  <p><strong>Another common dangling pointer scenario — returning the address of a local (stack) variable:</strong></p>
+  <pre><code class="language-cpp">int* createDangling() {
+    int local = 100;
+    return &amp;local; // DANGEROUS — local is destroyed when the function returns
+}
+
+int main() {
+    int *p = createDangling();
+    cout &lt;&lt; *p; // UNDEFINED BEHAVIOR — p points to stack memory that no longer belongs to `local`
+    return 0;
+}</code></pre>
+  <p><strong>Fix:</strong> either return by value (a copy), or allocate with <code>new</code> if the data genuinely needs to outlive the function (and remember to <code>delete</code> it eventually, or better — use a smart pointer, covered in Module 5.3).</p>
+
+  <h2>8. Double-Free (another classic bug)</h2>
+  <pre><code class="language-cpp">int *p = new int(5);
+delete p;
+delete p; // UNDEFINED BEHAVIOR — freeing already-freed memory corrupts heap bookkeeping structures
+</code></pre>
+  <p>This is why setting a pointer to <code>nullptr</code> right after <code>delete</code> is good practice — <code>delete nullptr;</code> is explicitly guaranteed safe (a no-op) by the C++ standard, so accidental double-deletes on a nulled pointer are harmless.</p>
+
+  <h2>9. Summary — Rules to Avoid Memory Bugs</h2>
+  <ul>
+    <li>Every <code>new</code> must have exactly one matching <code>delete</code> (or <code>new[]</code> with exactly one <code>delete[]</code>).</li>
+    <li>Never use memory after <code>delete</code>-ing it.</li>
+    <li>Never <code>delete</code> the same pointer twice.</li>
+    <li>Set pointers to <code>nullptr</code> after deleting them.</li>
+    <li>Never return the address of a local (stack) variable from a function.</li>
+    <li>In modern C++, prefer smart pointers (<code>unique_ptr</code>, <code>shared_ptr</code> — Module 5.3) which automate this entirely and eliminate these bug classes.</li>
+  </ul>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain the difference between stack and heap memory in terms of lifetime, speed, and management.</li>
+    <li>What is a memory leak? Give an example scenario (other than "forgetting delete") where a leak can occur even though <code>delete</code> is called somewhere in the program.</li>
+    <li>What is a dangling pointer? Describe two distinct ways a pointer can become dangling.</li>
+    <li>Why must <code>delete[]</code> be used for arrays instead of plain <code>delete</code>? What can go wrong if you mismatch them?</li>
+    <li>Why is <code>delete p; delete p;</code> dangerous, and how does setting <code>p = nullptr;</code> after the first delete help?</li>
+  </ol>
+
+  <h3>Predict/Identify the Bug</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">int* getValue() {
+    int x = 99;
+    return &amp;x;
+}</code></pre>
+      What's wrong with this function?
+    </li>
+    <li>
+      <pre><code class="language-cpp">int *arr = new int[10];
+delete arr;</code></pre>
+      What's wrong here?
+    </li>
+    <li>
+      <pre><code class="language-cpp">int *p = new int(5);
+p = new int(10);
+delete p;</code></pre>
+      Identify the bug and explain its consequence.
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program that dynamically allocates an array of <code>n</code> integers (n read from user input), fills it with values, prints the sum, and properly frees the memory.</li>
+    <li>Write a program that dynamically allocates a 2D matrix of size <code>rows x cols</code> (both read from input), fills it with the product <code>i*j</code>, prints it, and correctly frees all allocated memory.</li>
+    <li>Write a function <code>int* copyArray(int arr[], int size)</code> that dynamically allocates a new array, copies all elements from <code>arr</code> into it, and returns the new array's pointer. Demonstrate correct usage (and cleanup) in <code>main()</code>.</li>
+    <li>Write a program that deliberately demonstrates a memory leak in a comment-annotated function, then show the corrected version with proper <code>delete</code>.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

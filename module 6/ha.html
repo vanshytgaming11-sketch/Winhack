@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.5 — Hashing — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="hashing-dsa">
+  <h1>Module 6.5 — Hashing</h1>
+  <p>
+    Module 4.5 covered <code>unordered_map</code>/<code>unordered_set</code> as STL tools. This module covers hashing as an <strong>algorithmic technique</strong> — how hash functions work conceptually, collision handling strategies, and the recurring interview pattern of using frequency maps to convert brute-force O(n²) solutions into O(n).
+  </p>
+
+  <h2>1. How Hash Functions Work (Conceptual)</h2>
+  <p>
+    A hash function takes a key of (potentially) any size and type and deterministically maps it to a fixed-size integer (the hash code), which is then reduced (usually via modulo) to an index within the hash table's array of buckets.
+  </p>
+  <pre><code class="language-cpp">// Conceptual pseudocode — NOT how std::hash is actually implemented internally, but illustrates the idea:
+int simpleHash(string key, int tableSize) {
+    int hash = 0;
+    for (char c : key) {
+        hash = (hash * 31 + c) % tableSize;   // a common technique — multiply by a prime, add char value
+    }
+    return hash;
+}</code></pre>
+  <p><strong>Properties of a good hash function:</strong></p>
+  <ul>
+    <li><strong>Deterministic</strong> — the same key always produces the same hash.</li>
+    <li><strong>Uniform distribution</strong> — spreads keys evenly across buckets, minimizing collisions.</li>
+    <li><strong>Fast to compute</strong> — hashing itself shouldn't become the bottleneck.</li>
+  </ul>
+
+  <h2>2. Collision Handling</h2>
+  <p>
+    A collision occurs when two different keys hash to the same bucket. No hash function can be perfectly collision-free for arbitrary input (by the pigeonhole principle — there are more possible keys than buckets), so every hash table implementation needs a collision-handling strategy.
+  </p>
+
+  <h3>Strategy 1 — Separate Chaining (what <code>unordered_map</code> typically uses)</h3>
+  <p>Each bucket holds a small linked list (or similar structure) of all elements that hashed to it. On a collision, the new element is simply appended to that bucket's list.</p>
+  <pre><code>Bucket 0: []
+Bucket 1: [("apple", 5)] -&gt; [("grape", 12)]   ← both hashed to bucket 1, chained together
+Bucket 2: [("banana", 3)]
+Bucket 3: []</code></pre>
+  <p>Lookup requires hashing the key to find the right bucket, then linearly scanning that bucket's (usually short) chain — O(1) average when chains stay short, degrading toward O(n) if too many keys collide into the same bucket (the worst-case scenario referenced in Module 4.5).</p>
+
+  <h3>Strategy 2 — Open Addressing (an alternative, used by some other languages/implementations)</h3>
+  <p>On a collision, the table probes for the next available slot (e.g., linearly checking the next index, or using a secondary hash) instead of chaining. Not used by the standard <code>unordered_map</code> implementation, but worth knowing conceptually for interviews that ask about hash table design.</p>
+
+  <h2>3. Load Factor and Rehashing (recap, tied to Module 4.5)</h2>
+  <pre><code class="language-cpp">unordered_map&lt;string, int&gt; m;
+cout &lt;&lt; m.load_factor();    // elements / bucket_count — the average chain length
+// As elements are inserted and load_factor crosses a threshold (typically ~1.0),
+// the table automatically REHASHES: allocates more buckets and redistributes every
+// existing element — an O(n) operation, but amortized across many insertions it doesn't
+// change the overall O(1) average complexity, similar to vector's amortized O(1) push_back.</code></pre>
+
+  <h2>4. Frequency Maps — The Core Interview Pattern</h2>
+  <p>
+    The single most common hashing application in interviews: building a map (or array, for small fixed alphabets) that counts occurrences of each distinct value, then using that map to answer a question in O(n) that would otherwise require O(n²) comparisons.
+  </p>
+
+  <h3>Two Sum (unsorted array — the classic hashing example)</h3>
+  <pre><code class="language-cpp">vector&lt;int&gt; twoSum(vector&lt;int&gt; &amp;arr, int target) {
+    unordered_map&lt;int, int&gt; seen;   // value -&gt; index
+
+    for (int i = 0; i &lt; arr.size(); i++) {
+        int complement = target - arr[i];
+        if (seen.count(complement)) {
+            return {seen[complement], i};   // found a matching pair
+        }
+        seen[arr[i]] = i;   // record this value's index for future lookups
+    }
+    return {};   // no solution found
+}
+// O(n) time, O(n) space — a SINGLE pass, compare to the O(n²) brute-force nested loop</code></pre>
+  <p>
+    This is a direct improvement over the sorted-array two-pointer version from Module 6.2: on <strong>unsorted</strong> data, sorting first would cost O(n log n) — using a hash map instead achieves O(n), a genuine improvement, at the cost of O(n) extra space.
+  </p>
+
+  <h3>Anagram Grouping</h3>
+  <pre><code class="language-cpp">vector&lt;vector&lt;string&gt;&gt; groupAnagrams(vector&lt;string&gt; &amp;strs) {
+    unordered_map&lt;string, vector&lt;string&gt;&gt; groups;
+
+    for (string &amp;s : strs) {
+        string key = s;
+        sort(key.begin(), key.end());   // anagrams share the SAME sorted form — this becomes the map key
+        groups[key].push_back(s);
+    }
+
+    vector&lt;vector&lt;string&gt;&gt; result;
+    for (auto &amp;entry : groups) {
+        result.push_back(entry.second);
+    }
+    return result;
+}
+// O(n * k log k) time, where n = number of strings, k = average string length (dominated by sorting each string)</code></pre>
+
+  <h3>Subarray Sum Equals K (prefix sum + hash map combined — a powerful combo)</h3>
+  <pre><code class="language-cpp">int subarraySum(vector&lt;int&gt; &amp;arr, int k) {
+    unordered_map&lt;int, int&gt; prefixCount;
+    prefixCount[0] = 1;   // an empty prefix (sum 0) has occurred once — handles subarrays starting at index 0
+
+    int sum = 0, count = 0;
+    for (int x : arr) {
+        sum += x;
+        // If (sum - k) has been seen before as a prefix sum, then the subarray
+        // BETWEEN that earlier point and now sums to exactly k
+        if (prefixCount.count(sum - k)) {
+            count += prefixCount[sum - k];
+        }
+        prefixCount[sum]++;
+    }
+    return count;
+}
+// O(n) time, O(n) space — combines the prefix sum idea from Module 6.2 with a hash map
+// to avoid the O(n²) brute force of checking every possible subarray</code></pre>
+
+  <h2>5. Hashing Custom Objects (recap, tied to Module 4.5)</h2>
+  <p>
+    As covered in Module 4.5, using a custom struct/class as a key in <code>unordered_map</code>/<code>unordered_set</code> requires providing a custom hash function (and equality operator) — this is a common follow-up interview question after solving a hashing problem with primitive keys.
+  </p>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain separate chaining as a collision-handling strategy, and why it degrades toward O(n) lookups when too many keys land in the same bucket.</li>
+    <li>Why is a hash-map-based two-sum solution generally preferred over sorting the array first and using two pointers?</li>
+    <li>Explain why <code>prefixCount[0] = 1</code> is necessary in the subarray-sum-equals-K solution — what case would be missed without it?</li>
+    <li>Why does sorting each string to use as a map key correctly group all anagrams together?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function that finds the first non-repeating character in a string using a frequency map, in O(n) time.</li>
+    <li>Write a function that checks whether two arrays are equal ignoring order (i.e., they contain the same elements with the same frequencies) using a hash map.</li>
+    <li>Write a function that finds the longest consecutive sequence of integers in an unsorted array (e.g., <code>{100, 4, 200, 1, 3, 2}</code> → 4, for the sequence 1,2,3,4) in O(n) using a hash set.</li>
+    <li>Write a function that counts the number of pairs in an array whose difference equals a given K, using a hash map.</li>
+    <li>Write a function that determines if a Sudoku board's current state is valid (no repeated digits in any row, column, or 3x3 box) using hash sets.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

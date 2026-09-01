@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.13 — Bit Manipulation — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="bit-manipulation">
+  <h1>Module 6.13 — Bit Manipulation</h1>
+  <p>
+    Module 1.1 introduced bitwise operators mechanically. This module covers the recurring interview <strong>patterns</strong> built on them — XOR tricks, bitmasking for representing subsets, and single-number problems — all of which achieve O(1) extra space where array/hash-based approaches would need O(n).
+  </p>
+
+  <h2>1. XOR Fundamentals — The Properties That Make It Powerful</h2>
+  <pre><code class="language-cpp">// Core XOR properties (all provable directly from its truth table):
+// a ^ a = 0        — anything XORed with itself cancels to zero
+// a ^ 0 = a         — XOR with zero is the identity operation
+// XOR is commutative and associative — order doesn't matter: a^b^c == c^a^b == b^c^a
+
+int a = 5, b = 3;
+cout &lt;&lt; (a ^ a);   // 0
+cout &lt;&lt; (a ^ 0);      // 5</code></pre>
+
+  <h2>2. Single Number — The Classic XOR Interview Problem</h2>
+  <p>Given an array where every element appears TWICE except one, find the single element that appears once — in O(n) time, O(1) extra space.</p>
+  <pre><code class="language-cpp">int singleNumber(vector&lt;int&gt; &amp;nums) {
+    int result = 0;
+    for (int n : nums) {
+        result ^= n;   // XOR everything together
+    }
+    return result;
+}
+// WHY this works: every element that appears TWICE cancels itself out (a^a=0),
+// due to XOR's commutative/associative properties, the ORDER of cancellation doesn't
+// matter — after all pairs cancel, only the single unpaired element remains.
+// O(n) time, O(1) SPACE — dramatically better than the O(n) space a hash-set-based
+// approach (Module 6.5) would require to track seen elements</code></pre>
+
+  <h3>XOR Swap — Swapping Two Numbers Without a Temp Variable (recap from Module 1.1's practice questions)</h3>
+  <pre><code class="language-cpp">int a = 5, b = 10;
+a = a ^ b;
+b = a ^ b;   // b becomes original a
+a = a ^ b;   // a becomes original b
+cout &lt;&lt; a &lt;&lt; " " &lt;&lt; b;   // 10 5</code></pre>
+
+  <h2>3. Checking, Setting, and Clearing Bits</h2>
+  <pre><code class="language-cpp">int num = 20;   // binary: 10100
+
+// CHECK if the i-th bit is set (1-indexed from the right, 0-based shift)
+bool isSet = (num &gt;&gt; 2) &amp; 1;   // shifts right by 2, then checks the last bit → checks bit index 2
+cout &lt;&lt; isSet;                    // true — bit 2 of 10100 is 1
+
+// SET the i-th bit (force it to 1)
+num = num | (1 &lt;&lt; 0);   // sets bit 0 → 10101 = 21
+
+// CLEAR the i-th bit (force it to 0)
+num = num &amp; ~(1 &lt;&lt; 2);   // clears bit 2 → 10001 = 17
+
+// TOGGLE the i-th bit (flip it)
+num = num ^ (1 &lt;&lt; 4);   // toggles bit 4</code></pre>
+
+  <h2>4. Counting Set Bits</h2>
+  <pre><code class="language-cpp">int countSetBits(int n) {
+    int count = 0;
+    while (n &gt; 0) {
+        count += n &amp; 1;   // check the last bit
+        n &gt;&gt;= 1;             // shift right, discard the checked bit
+    }
+    return count;
+}
+// O(log n) time — proportional to the number of bits in n
+
+// FASTER variant — Brian Kernighan's algorithm
+int countSetBitsFast(int n) {
+    int count = 0;
+    while (n &gt; 0) {
+        n = n &amp; (n - 1);   // clears the LOWEST set bit each iteration — see explanation below
+        count++;
+    }
+    return count;
+}
+// O(number of SET bits), not O(total bits) — faster when the number is sparse (few 1-bits)</code></pre>
+  <p><strong>Why <code>n &amp; (n-1)</code> clears the lowest set bit:</strong> subtracting 1 flips all trailing zero bits to 1 and the lowest set bit to 0 (e.g., <code>10100 - 1 = 10011</code>) — ANDing the original with this result cancels out that lowest set bit while leaving everything above it unchanged.</p>
+
+  <h2>5. Checking if a Number Is a Power of Two</h2>
+  <pre><code class="language-cpp">bool isPowerOfTwo(int n) {
+    return n &gt; 0 &amp;&amp; (n &amp; (n - 1)) == 0;
+}
+// A power of two in binary has EXACTLY one set bit (e.g., 8 = 1000).
+// n &amp; (n-1) clears that single set bit, leaving 0 — this ONLY happens
+// when n had exactly one bit set to begin with. O(1) time — no loop needed at all.</code></pre>
+
+  <h2>6. Bitmasking — Representing Subsets as Integers</h2>
+  <p>
+    Since each bit can independently be 0 or 1, an integer's binary representation can encode a subset of up to 32 (or 64) elements — bit <code>i</code> set means "element <code>i</code> is included." This connects directly back to the backtracking-based subset generation from Module 6.9, offering an alternative iterative approach.
+  </p>
+  <pre><code class="language-cpp">vector&lt;int&gt; nums = {10, 20, 30};
+int n = nums.size();
+
+for (int mask = 0; mask &lt; (1 &lt;&lt; n); mask++) {   // iterate through ALL 2^n possible bitmasks
+    vector&lt;int&gt; subset;
+    for (int i = 0; i &lt; n; i++) {
+        if (mask &amp; (1 &lt;&lt; i)) {   // is bit i set in this mask?
+            subset.push_back(nums[i]);
+        }
+    }
+    // process `subset` — this mask represents ONE specific subset
+}
+// O(2^n * n) time — same overall complexity as the backtracking approach, but iterative
+// rather than recursive, and the bitmask ITSELF can serve as a compact way to
+// represent/compare subsets (e.g., as a hash map key or DP state — see below)</code></pre>
+
+  <h3>Bitmask as DP State (Preview — "Bitmask DP")</h3>
+  <pre><code class="language-cpp">// A common advanced pattern: dp[mask] represents the best result achievable using
+// EXACTLY the subset of elements represented by `mask` — used in problems like the
+// Traveling Salesman Problem, where mask tracks which cities have been visited so far.
+// vector&lt;int&gt; dp(1 &lt;&lt; n, INT_MAX);   // one DP state per possible subset — a direct
+                                          // application of the subset-encoding idea above</code></pre>
+
+  <h2>7. Finding the Two Non-Repeating Numbers (XOR extension)</h2>
+  <p>A trickier variant: given an array where every element appears twice EXCEPT two unique elements, find both.</p>
+  <pre><code class="language-cpp">vector&lt;int&gt; singleNumberTwo(vector&lt;int&gt; &amp;nums) {
+    int xorAll = 0;
+    for (int n : nums) xorAll ^= n;   // xorAll = a ^ b (the two unique numbers), since all pairs cancel
+
+    // Find any bit where a and b DIFFER — xorAll's set bits are exactly those positions
+    int diffBit = xorAll &amp; (-xorAll);   // isolates the LOWEST set bit (two's complement trick)
+
+    int a = 0, b = 0;
+    for (int n : nums) {
+        if (n &amp; diffBit) a ^= n;   // group 1: numbers with that bit SET
+        else b ^= n;                    // group 2: numbers with that bit CLEAR
+    }
+    // Every PAIRED number falls into the SAME group as its duplicate (same bit value),
+    // so pairs still cancel within each group — leaving exactly a and b isolated, one per group
+    return {a, b};
+}
+// O(n) time, O(1) space</code></pre>
+  <p><strong>Why <code>xorAll &amp; (-xorAll)</code> isolates the lowest set bit:</strong> in two's complement, <code>-x</code> is <code>~x + 1</code> — this has the effect of flipping all bits up to and including the lowest set bit of <code>x</code>, then that AND operation leaves only that one bit standing, zeroing out everything else.</p>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why XOR-ing an entire array together correctly isolates the single non-duplicated element, referencing XOR's specific algebraic properties.</li>
+    <li>Explain why <code>n &amp; (n-1)</code> clears exactly the lowest set bit, using a worked binary example.</li>
+    <li>How does representing a subset as an integer bitmask connect to the backtracking-based subset generation from Module 6.9? What's the complexity trade-off between the two approaches?</li>
+    <li>In the "two non-repeating numbers" problem, explain why splitting numbers by a differing bit correctly separates the two unique values into different groups while keeping all duplicate pairs together.</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function to count the total number of set bits across all numbers from 1 to n (not just one number) — think about how to reuse previously computed results.</li>
+    <li>Write a function to find the missing number in an array containing n distinct numbers from 0 to n, using XOR instead of the sum-formula approach.</li>
+    <li>Write a function using bitmasking to generate the power set of a given array iteratively (no recursion), matching the backtracking version's output from Module 6.9.</li>
+    <li>Write a function that checks whether two integers have opposite signs, using only bitwise operators (no comparison operators like <code>&lt;</code> or <code>&gt;</code>).</li>
+    <li>Write a function to reverse the bits of a 32-bit unsigned integer.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

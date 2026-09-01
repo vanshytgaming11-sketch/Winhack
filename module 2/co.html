@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 2.3 — Copying Objects — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="copying-objects">
+  <h1>Module 2.3 — Copying Objects</h1>
+  <p>
+    When one object is used to initialize or assign to another, C++ needs to decide how to copy its data members. By default, the compiler generates a copy constructor and copy assignment operator that do this member-by-member — but for classes managing dynamically allocated resources, the default behavior is dangerously wrong, which is exactly why this topic is a favorite in interviews.
+  </p>
+
+  <h2>1. Copy Constructor</h2>
+  <p>A copy constructor initializes a new object as a copy of an existing object of the same class. It's invoked in these situations:</p>
+  <ul>
+    <li>When an object is initialized from another: <code>Student s2 = s1;</code> or <code>Student s2(s1);</code></li>
+    <li>When an object is passed by value to a function</li>
+    <li>When an object is returned by value from a function (though often elided — see Module 5.5)</li>
+  </ul>
+
+  <pre><code class="language-cpp">class Student {
+    public:
+        string name;
+        int age;
+
+        Student(string n, int a) : name(n), age(a) {}
+
+        // Copy constructor — compiler-provided by default, but can be written explicitly:
+        Student(const Student &amp;other) {
+            name = other.name;
+            age = other.age;
+            cout &lt;&lt; "Copy constructor called" &lt;&lt; endl;
+        }
+};
+
+int main() {
+    Student s1("Vinit", 22);
+    Student s2 = s1;          // copy constructor called
+    Student s3(s1);             // also copy constructor
+
+    s2.name = "Changed";
+    cout &lt;&lt; s1.name &lt;&lt; " " &lt;&lt; s2.name; // Vinit Changed — s1 unaffected, s2 is an independent copy
+    return 0;
+}</code></pre>
+
+  <p><strong>Note the signature:</strong> the parameter is always <code>const ClassName &amp;</code> — a const reference, never by value. Passing by value would itself require making a copy to invoke the function, causing infinite recursion.</p>
+
+  <h2>2. Copy Assignment Operator</h2>
+  <p>
+    While the copy constructor handles creation of a new object from an existing one, the copy assignment operator (<code>operator=</code>) handles assigning one <em>already-existing</em> object's contents to another <em>already-existing</em> object.
+  </p>
+  <pre><code class="language-cpp">class Student {
+    public:
+        string name;
+        int age;
+
+        Student(string n, int a) : name(n), age(a) {}
+
+        Student&amp; operator=(const Student &amp;other) {
+            if (this == &amp;other) return *this; // self-assignment check — see below
+            name = other.name;
+            age = other.age;
+            cout &lt;&lt; "Copy assignment called" &lt;&lt; endl;
+            return *this;
+        }
+};
+
+int main() {
+    Student s1("Vinit", 22);
+    Student s2("Aman", 20);
+
+    s2 = s1;   // copy ASSIGNMENT called — s2 already exists, being overwritten
+    cout &lt;&lt; s2.name; // Vinit
+    return 0;
+}</code></pre>
+
+  <h3>Copy Constructor vs Copy Assignment — how to tell them apart</h3>
+  <pre><code class="language-cpp">Student s1("Vinit", 22);
+Student s2 = s1;     // COPY CONSTRUCTOR — s2 doesn't exist yet, being CREATED from s1
+Student s3("X", 0);
+s3 = s1;                // COPY ASSIGNMENT — s3 already exists, being OVERWRITTEN with s1's data</code></pre>
+  <p><strong>Rule of thumb:</strong> if the destination object is being created right now (declaration + initialization), it's the copy constructor. If the destination object already exists and is being assigned a new value afterward, it's copy assignment.</p>
+
+  <h2>3. Shallow Copy vs Deep Copy</h2>
+  <p>
+    This is the single most important concept in this module. The compiler-generated default copy constructor/assignment perform a <strong>shallow copy</strong> — they copy each member's value directly, byte for byte. For pointer members, this copies the <em>pointer itself</em> (the address), not the memory it points to. This becomes a serious bug when a class manages heap-allocated resources.
+  </p>
+
+  <h3>The Problem — Shallow Copy of a Pointer Member</h3>
+  <pre><code class="language-cpp">class IntArray {
+    public:
+        int *data;
+        int size;
+
+        IntArray(int s) : size(s) {
+            data = new int[size];
+            for (int i = 0; i &lt; size; i++) data[i] = 0;
+        }
+
+        ~IntArray() {
+            delete[] data;
+        }
+        // NO custom copy constructor defined — compiler generates a SHALLOW one
+};
+
+int main() {
+    IntArray a(5);
+    IntArray b = a;      // shallow copy — b.data now points to the SAME memory as a.data!
+
+    b.data[0] = 99;         // modifies through b's pointer...
+    cout &lt;&lt; a.data[0];        // ...but a.data[0] ALSO shows 99! They share the same memory.
+
+    // WORSE: when main() ends, BOTH a's and b's destructors run,
+    // and BOTH call delete[] on the SAME memory address — this is a DOUBLE FREE,
+    // which is undefined behavior and often crashes the program.
+    return 0;
+}</code></pre>
+
+  <p>This diagram shows what a shallow copy actually does:</p>
+  <pre><code>Before copy:
+  a.data ──────► [heap block #1: 0 0 0 0 0]
+
+After "IntArray b = a;" (SHALLOW COPY):
+  a.data ──────► [heap block #1: 0 0 0 0 0]
+  b.data ──────┘   (both pointers point to the SAME block — no new memory allocated for b)</code></pre>
+
+  <h3>The Fix — Deep Copy</h3>
+  <p>A deep copy allocates <strong>separate, independent</strong> memory for the new object and copies the actual data values into it — not just the pointer.</p>
+  <pre><code class="language-cpp">class IntArray {
+    public:
+        int *data;
+        int size;
+
+        IntArray(int s) : size(s) {
+            data = new int[size];
+            for (int i = 0; i &lt; size; i++) data[i] = 0;
+        }
+
+        // DEEP COPY constructor
+        IntArray(const IntArray &amp;other) : size(other.size) {
+            data = new int[size];                  // allocate SEPARATE, NEW memory
+            for (int i = 0; i &lt; size; i++) {
+                data[i] = other.data[i];              // copy VALUES, not the pointer
+            }
+        }
+
+        // DEEP COPY assignment
+        IntArray&amp; operator=(const IntArray &amp;other) {
+            if (this == &amp;other) return *this;       // self-assignment guard
+
+            delete[] data;                             // free existing memory first
+            size = other.size;
+            data = new int[size];                        // allocate new memory
+            for (int i = 0; i &lt; size; i++) {
+                data[i] = other.data[i];
+            }
+            return *this;
+        }
+
+        ~IntArray() {
+            delete[] data;
+        }
+};
+
+int main() {
+    IntArray a(5);
+    IntArray b = a;      // DEEP copy constructor — b.data is now a SEPARATE block
+
+    b.data[0] = 99;
+    cout &lt;&lt; a.data[0];      // 0 — unaffected, because a and b now own independent memory
+
+    // Destructors of a and b each delete[] their OWN separate memory — no double free
+    return 0;
+}</code></pre>
+
+  <p>After the fix:</p>
+  <pre><code>After "IntArray b = a;" (DEEP COPY):
+  a.data ──────► [heap block #1: 0 0 0 0 0]
+  b.data ──────► [heap block #2: 0 0 0 0 0]   (a completely separate, independently owned copy)</code></pre>
+
+  <h2>4. The Self-Assignment Check</h2>
+  <p>
+    In the copy assignment operator, always guard against <code>obj = obj;</code> (assigning an object to itself). Without the check, <code>delete[] data;</code> would free the memory <em>before</em> the subsequent lines try to read <code>other.data[i]</code> — but since <code>other</code> IS <code>*this</code> in a self-assignment, you'd be reading from memory you just freed.
+  </p>
+  <pre><code class="language-cpp">IntArray&amp; operator=(const IntArray &amp;other) {
+    if (this == &amp;other) return *this;  // guards against a = a;
+    // ... rest of deep copy logic
+}</code></pre>
+
+  <h2>5. Shallow Copy Is NOT Always Wrong</h2>
+  <p>
+    For classes whose members are all value types (int, double, string — which manage their own deep-copying internally) and contain no raw owning pointers, the compiler-generated shallow copy is perfectly correct and efficient. Deep copy is only necessary when the class directly owns a raw pointer (or other resource handle) that requires exclusive management.
+  </p>
+  <pre><code class="language-cpp">class Point {
+    public:
+        int x, y;   // plain value types — default (shallow) copy is completely safe and correct here
+};
+
+int main() {
+    Point p1{1, 2};
+    Point p2 = p1;    // compiler's default copy is fine — no shared ownership issue
+    return 0;
+}</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain, step by step, why a shallow copy of a class containing a raw pointer member leads to a double-free bug.</li>
+    <li>Why does the self-assignment check (<code>if (this == &amp;other)</code>) matter specifically in the copy assignment operator, but is not needed in the copy constructor?</li>
+    <li>Why must the copy constructor's parameter be <code>const ClassName&amp;</code> and never <code>ClassName</code> (by value)?</li>
+    <li>Give an example of a class where the compiler's default (shallow) copy behavior is completely correct and safe.</li>
+    <li>What is the difference in when the copy constructor vs. copy assignment operator gets invoked?</li>
+  </ol>
+
+  <h3>Predict the Output / Identify the Bug</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">class Buffer {
+    public:
+        char *data;
+        Buffer(const char *s) {
+            data = new char[strlen(s) + 1];
+            strcpy(data, s);
+        }
+        ~Buffer() { delete[] data; }
+        // no custom copy constructor
+};
+
+int main() {
+    Buffer b1("Hello");
+    Buffer b2 = b1;
+    // What happens when main() ends? Explain the bug.
+}</code></pre>
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a class <code>DynamicArray</code> that owns a heap-allocated <code>int*</code>. Implement a proper deep-copy constructor and copy assignment operator, along with a destructor. Demonstrate in <code>main()</code> that modifying a copy does not affect the original.</li>
+    <li>Write a class <code>Matrix</code> that dynamically allocates a 2D array (as in Module 2.1). Implement a correct deep copy constructor and destructor that handles the nested allocation properly.</li>
+    <li>Write a class <code>Person</code> with a <code>char* name</code> member allocated in the constructor. Deliberately write it WITHOUT a custom copy constructor first, demonstrate (in comments) the double-free crash scenario, then fix it with a proper deep copy.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

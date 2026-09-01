@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 2.4 — OOP Principles — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="oop-principles">
+  <h1>Module 2.4 — OOP Principles</h1>
+  <p>
+    Object-Oriented Programming (OOP) rests on four foundational principles: Encapsulation, Inheritance, Polymorphism, and Abstraction. These aren't just C++ syntax features — they're a way of organizing code around real-world entities and their interactions, and interviewers frequently ask you to explain each with your own example.
+  </p>
+
+  <h2>1. Encapsulation</h2>
+  <p>
+    Encapsulation is the bundling of data and the functions that operate on it into a single unit (a class), while restricting direct access to the internal data — typically by making data members <code>private</code> and exposing controlled access through <code>public</code> member functions (getters/setters).
+  </p>
+  <p><strong>Why it matters:</strong> it protects an object's internal state from being put into an invalid condition by external code, and lets you change the internal implementation later without breaking code that uses the class.</p>
+
+  <pre><code class="language-cpp">class BankAccount {
+    private:
+        double balance;   // hidden — cannot be modified directly from outside
+
+    public:
+        BankAccount(double initial) : balance(initial) {}
+
+        void deposit(double amount) {
+            if (amount &gt; 0) balance += amount; // validation enforced HERE, in one place
+        }
+
+        bool withdraw(double amount) {
+            if (amount &gt; 0 &amp;&amp; amount &lt;= balance) {
+                balance -= amount;
+                return true;
+            }
+            return false; // rejects invalid withdrawals
+        }
+
+        double getBalance() const {
+            return balance;
+        }
+};
+
+int main() {
+    BankAccount acc(1000);
+    acc.deposit(500);
+    acc.withdraw(2000);      // rejected — insufficient funds, balance untouched
+    // acc.balance = -999;    // COMPILE ERROR — can't bypass validation, balance is private
+    cout &lt;&lt; acc.getBalance(); // 1500
+    return 0;
+}</code></pre>
+  <p>Without encapsulation, any code with access to a <code>BankAccount</code> object could set <code>balance = -999;</code> directly, bypassing all validation logic — encapsulation makes that impossible by construction.</p>
+
+  <h2>2. Inheritance</h2>
+  <p>
+    Inheritance allows a new class (the <strong>derived</strong>/<strong>child</strong> class) to acquire the properties and behavior of an existing class (the <strong>base</strong>/<strong>parent</strong> class), while adding or overriding functionality. This models "is-a" relationships and enables code reuse.
+  </p>
+
+  <pre><code class="language-cpp">class Animal {
+    public:
+        string name;
+
+        Animal(string n) : name(n) {}
+
+        void eat() {
+            cout &lt;&lt; name &lt;&lt; " is eating" &lt;&lt; endl;
+        }
+};
+
+class Dog : public Animal {   // Dog INHERITS from Animal — "a Dog IS AN Animal"
+    public:
+        Dog(string n) : Animal(n) {}  // must call base class constructor explicitly
+
+        void bark() {
+            cout &lt;&lt; name &lt;&lt; " says Woof!" &lt;&lt; endl; // `name` is inherited from Animal
+        }
+};
+
+int main() {
+    Dog d("Rex");
+    d.eat();     // inherited from Animal — "Rex is eating"
+    d.bark();      // Dog's own method — "Rex says Woof!"
+    return 0;
+}</code></pre>
+
+  <h3>Types of Inheritance</h3>
+  <table>
+    <thead>
+      <tr><th>Type</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Single</td><td>One derived class from one base class</td></tr>
+      <tr><td>Multiple</td><td>One derived class from two or more base classes</td></tr>
+      <tr><td>Multilevel</td><td>A chain — C derives from B, B derives from A</td></tr>
+      <tr><td>Hierarchical</td><td>Multiple derived classes from a single base class</td></tr>
+      <tr><td>Hybrid</td><td>A combination of the above patterns</td></tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-cpp">// Multilevel inheritance
+class A { public: void showA() { cout &lt;&lt; "A"; } };
+class B : public A { public: void showB() { cout &lt;&lt; "B"; } };
+class C : public B { public: void showC() { cout &lt;&lt; "C"; } };
+
+int main() {
+    C obj;
+    obj.showA(); obj.showB(); obj.showC(); // ABC — C inherits from both A and B transitively
+}
+
+// Hierarchical inheritance
+class Shape { public: void info() { cout &lt;&lt; "I am a shape"; } };
+class Circle : public Shape {};
+class Square : public Shape {};
+// Both Circle and Square inherit independently from Shape</code></pre>
+
+  <h3>Access Specifiers in Inheritance</h3>
+  <p>The inheritance keyword (<code>public</code>, <code>protected</code>, or <code>private</code>) controls how the base class's members are exposed in the derived class:</p>
+  <table>
+    <thead>
+      <tr><th>Base member</th><th><code>public</code> inheritance</th><th><code>protected</code> inheritance</th><th><code>private</code> inheritance</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>public</code></td><td>stays <code>public</code></td><td>becomes <code>protected</code></td><td>becomes <code>private</code></td></tr>
+      <tr><td><code>protected</code></td><td>stays <code>protected</code></td><td>stays <code>protected</code></td><td>becomes <code>private</code></td></tr>
+      <tr><td><code>private</code></td><td>NOT accessible in derived class</td><td>NOT accessible</td><td>NOT accessible</td></tr>
+    </tbody>
+  </table>
+  <p><code>public</code> inheritance (by far the most common) models a true "is-a" relationship and is almost always what you want.</p>
+
+  <h2>3. Polymorphism</h2>
+  <p>
+    Polymorphism ("many forms") means the same interface (function name/operator) can behave differently depending on context. C++ supports two kinds:
+  </p>
+  <ul>
+    <li><strong>Compile-time polymorphism</strong> — resolved by the compiler before the program runs. Achieved via function overloading (Module 1.3) and operator overloading (Module 2.5).</li>
+    <li><strong>Runtime polymorphism</strong> — resolved while the program is running, based on the actual object type. Achieved via virtual functions (full deep-dive in Module 2.5).</li>
+  </ul>
+
+  <h3>Compile-time Polymorphism (recap)</h3>
+  <pre><code class="language-cpp">void print(int x)    { cout &lt;&lt; "int: " &lt;&lt; x; }
+void print(double x)  { cout &lt;&lt; "double: " &lt;&lt; x; }
+// The compiler decides WHICH print() to call based on argument type — decided at COMPILE time</code></pre>
+
+  <h3>Runtime Polymorphism (preview — full mechanics in Module 2.5)</h3>
+  <pre><code class="language-cpp">class Animal {
+    public:
+        virtual void speak() {   // `virtual` enables runtime polymorphism
+            cout &lt;&lt; "Some generic animal sound" &lt;&lt; endl;
+        }
+};
+
+class Dog : public Animal {
+    public:
+        void speak() override {   // overrides the base class version
+            cout &lt;&lt; "Woof!" &lt;&lt; endl;
+        }
+};
+
+class Cat : public Animal {
+    public:
+        void speak() override {
+            cout &lt;&lt; "Meow!" &lt;&lt; endl;
+        }
+};
+
+int main() {
+    Animal *a1 = new Dog();
+    Animal *a2 = new Cat();
+
+    a1-&gt;speak();  // "Woof!" — even though the pointer's declared type is Animal,
+    a2-&gt;speak();   // "Meow!" — the ACTUAL object type determines which speak() runs, at RUNTIME
+
+    delete a1;
+    delete a2;
+    return 0;
+}</code></pre>
+  <p>This is the essence of runtime polymorphism: the same call, <code>ptr-&gt;speak()</code>, produces different behavior depending on what object <code>ptr</code> actually points to — not what type it was declared as. The full mechanism (vtables, why <code>virtual</code> is required for this to work) is covered in depth in Module 2.5.</p>
+
+  <h2>4. Abstraction</h2>
+  <p>
+    Abstraction means exposing only the essential, relevant details of an object while hiding the complex implementation details behind a simpler interface. Where encapsulation is about <em>restricting access</em> to data, abstraction is about <em>simplifying what the user needs to think about</em>.
+  </p>
+  <p><strong>Everyday analogy:</strong> driving a car requires knowing how to use the steering wheel, pedals, and gear stick — you don't need to understand the internal combustion engine or transmission mechanics to drive. The car's controls are an abstraction over its internal complexity.</p>
+
+  <pre><code class="language-cpp">class Car {
+    private:
+        void injectFuel() { /* complex internal detail */ }
+        void igniteSpark() { /* complex internal detail */ }
+        void engageTransmission() { /* complex internal detail */ }
+
+    public:
+        void start() {          // simple, abstracted interface exposed to the user
+            injectFuel();
+            igniteSpark();
+            engageTransmission();
+            cout &lt;&lt; "Car started!" &lt;&lt; endl;
+        }
+};
+
+int main() {
+    Car myCar;
+    myCar.start();  // the USER only needs to know about start() — everything else is hidden
+    return 0;
+}</code></pre>
+  <p>
+    In C++, abstraction is achieved through access specifiers (hiding implementation details as <code>private</code>) and, more formally, through <strong>abstract classes</strong> and <strong>pure virtual functions</strong>, which define an interface without specifying implementation — covered fully in Module 2.5.
+  </p>
+
+  <h2>5. Encapsulation vs Abstraction — A Common Point of Confusion</h2>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>Encapsulation</th><th>Abstraction</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Focus</td><td>Protecting/restricting access to data (the "how")</td><td>Hiding complexity, exposing only what's necessary (the "what")</td></tr>
+      <tr><td>Mechanism in C++</td><td>Access specifiers (<code>private</code>, <code>protected</code>)</td><td>Abstract classes, interfaces, pure virtual functions</td></tr>
+      <tr><td>Question it answers</td><td>"Who can access this data?"</td><td>"What does the user of this class need to know?"</td></tr>
+      <tr><td>Analogy</td><td>A capsule/pill — hides the medicine inside a shell</td><td>A car's dashboard — hides engine complexity behind simple controls</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain encapsulation with an example different from the ones given above. Why does making data members private matter?</li>
+    <li>What is the difference between compile-time and runtime polymorphism? Give one C++ mechanism for each.</li>
+    <li>Explain the difference between encapsulation and abstraction — many people confuse these. Use your own analogy.</li>
+    <li>What does <code>public</code> inheritance model conceptually? Why is it far more common than <code>private</code> or <code>protected</code> inheritance?</li>
+    <li>In the runtime polymorphism example above, why does calling <code>speak()</code> through an <code>Animal*</code> pointer invoke the derived class's version instead of the base class's?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Design a class hierarchy: a base class <code>Vehicle</code> with a <code>name</code> and a virtual function <code>move()</code>, and derived classes <code>Car</code> and <code>Bike</code> that override <code>move()</code> with their own message. Demonstrate runtime polymorphism using a <code>Vehicle*</code> pointer.</li>
+    <li>Design an <code>Employee</code> class with private <code>salary</code>, exposing a <code>public</code> getter and a setter that rejects negative values — demonstrating encapsulation.</li>
+    <li>Design a 3-level inheritance chain: <code>LivingBeing</code> → <code>Animal</code> → <code>Dog</code>, where each level adds one new member function, and demonstrate that a <code>Dog</code> object can call functions from all three levels.</li>
+    <li>Design a simplified <code>CoffeeMachine</code> class that exposes only one public method <code>brew()</code>, internally calling several private helper methods (<code>grindBeans()</code>, <code>heatWater()</code>, <code>pourWater()</code>) — demonstrating abstraction.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

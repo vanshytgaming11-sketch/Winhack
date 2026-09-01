@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 4.6 — Iterators — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="iterators">
+  <h1>Module 4.6 — Iterators</h1>
+  <p>
+    An iterator is an object that acts like a generalized pointer, allowing traversal through a container's elements without exposing the container's internal implementation. Iterators are the glue that lets STL algorithms (Module 4.7) work uniformly across completely different container types.
+  </p>
+
+  <h2>1. <code>begin()</code> and <code>end()</code></h2>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {10, 20, 30, 40, 50};
+
+vector&lt;int&gt;::iterator it = v.begin();   // points to the FIRST element
+cout &lt;&lt; *it;                                // 10
+
+it = v.end();                                 // points ONE PAST the LAST element (NOT the last element itself!)
+// *it would be UNDEFINED BEHAVIOR — end() is a sentinel, not a valid dereferenceable position</code></pre>
+
+  <p><strong>Using <code>auto</code> to simplify the verbose iterator type (standard practice):</strong></p>
+  <pre><code class="language-cpp">auto it = v.begin();   // much cleaner than vector&lt;int&gt;::iterator it = v.begin();</code></pre>
+
+  <h3>The Standard Iteration Idiom</h3>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {10, 20, 30, 40, 50};
+
+for (auto it = v.begin(); it != v.end(); ++it) {
+    cout &lt;&lt; *it &lt;&lt; " ";
+}
+// 10 20 30 40 50</code></pre>
+  <p><strong>Why <code>!=</code> and not <code>&lt;</code>?</strong> Not all iterators support relational comparison (<code>&lt;</code>) — a <code>list</code> iterator, for instance, only supports <code>==</code>/<code>!=</code> and increment, since "less than" has no meaningful definition for a linked list's non-contiguous nodes. Using <code>!=</code> works universally across every container type; <code>&lt;</code> only works for random-access iterators like <code>vector</code>'s.</p>
+
+  <h2>2. Iterator Movement</h2>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {10, 20, 30, 40, 50};
+
+auto it = v.begin();
+++it;              // pre-increment — moves to next element — prefer this over it++ for efficiency
+cout &lt;&lt; *it;         // 20
+
+it--;                  // moves back one position
+cout &lt;&lt; *it;             // 10
+
+auto lastIt = v.end();
+--lastIt;                   // moves BACK from end() to point at the actual LAST element
+cout &lt;&lt; *lastIt;              // 50 — this is the standard idiom for accessing the last element via iterator</code></pre>
+
+  <h2>3. Categories of Iterators</h2>
+  <p>Different containers support different levels of iterator capability, forming a hierarchy from most to least restrictive:</p>
+  <table>
+    <thead>
+      <tr><th>Category</th><th>Supports</th><th>Example containers</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Input iterator</td><td>Single-pass read, <code>++</code></td><td>Stream iterators</td></tr>
+      <tr><td>Output iterator</td><td>Single-pass write, <code>++</code></td><td>Insert iterators</td></tr>
+      <tr><td>Forward iterator</td><td>Multi-pass read/write, <code>++</code></td><td><code>forward_list</code>, <code>unordered_map</code>/<code>unordered_set</code></td></tr>
+      <tr><td>Bidirectional iterator</td><td>Forward + <code>--</code> (move backward)</td><td><code>list</code>, <code>map</code>, <code>set</code></td></tr>
+      <tr><td>Random-access iterator</td><td>Bidirectional + jump by any offset (<code>it + n</code>), full comparison (<code>&lt;</code>, <code>&gt;</code>)</td><td><code>vector</code>, <code>deque</code>, array</td></tr>
+    </tbody>
+  </table>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {10, 20, 30, 40, 50};
+auto vit = v.begin();
+vit = vit + 3;          // OK — vector has RANDOM-ACCESS iterators, supports arbitrary jumps
+cout &lt;&lt; *vit;             // 40
+
+list&lt;int&gt; l = {10, 20, 30, 40, 50};
+auto lit = l.begin();
+// lit = lit + 3;        // COMPILE ERROR — list only has BIDIRECTIONAL iterators, no `+` jump support
+++lit; ++lit; ++lit;        // must advance one step at a time instead
+cout &lt;&lt; *lit;                 // 40</code></pre>
+
+  <h2>4. <code>advance()</code></h2>
+  <p>
+    <code>std::advance(it, n)</code> (from <code>&lt;iterator&gt;</code>) moves an iterator forward by <code>n</code> positions, working correctly regardless of iterator category — for random-access iterators it's O(1) (uses <code>+</code> internally), but for bidirectional/forward iterators it performs <code>n</code> individual <code>++</code> steps internally, making it O(n).
+  </p>
+  <pre><code class="language-cpp">#include &lt;iterator&gt;
+
+list&lt;int&gt; l = {10, 20, 30, 40, 50};
+auto it = l.begin();
+advance(it, 2);        // moves forward 2 positions — works even though list lacks `+`
+cout &lt;&lt; *it;              // 30
+
+advance(it, -1);            // negative values move BACKWARD (works for bidirectional+ iterators)
+cout &lt;&lt; *it;                  // 20</code></pre>
+
+  <h2>5. Iterator vs Pointer</h2>
+  <p>Iterators were deliberately designed to mimic pointer syntax — this is intentional, since raw pointers ARE valid random-access iterators for plain arrays:</p>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>Pointer</th><th>Iterator</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Works with</td><td>Raw arrays, or explicit address-of use</td><td>Any STL container, generically</td></tr>
+      <tr><td>Type safety</td><td>Can point anywhere — less safe</td><td>Bound to the specific container's element type</td></tr>
+      <tr><td>Abstraction</td><td>Exposes raw memory addresses directly</td><td>Hides internal representation (e.g., tree node internals for <code>map</code>)</td></tr>
+      <tr><td>Arithmetic support</td><td>Always supported (raw memory)</td><td>Depends on category — only random-access iterators support full arithmetic</td></tr>
+    </tbody>
+  </table>
+  <pre><code class="language-cpp">int arr[5] = {1, 2, 3, 4, 5};
+int *p = arr;          // a raw pointer used exactly like an iterator
+cout &lt;&lt; *(p + 2);         // 3 — works because arrays have contiguous memory, just like vector
+
+vector&lt;int&gt; v = {1, 2, 3, 4, 5};
+auto it = v.begin();
+cout &lt;&lt; *(it + 2);           // 3 — vector's iterator IS effectively a pointer under the hood (or behaves like one)</code></pre>
+
+  <h2>6. Const Iterators &amp; Reverse Iterators</h2>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {10, 20, 30};
+
+for (auto it = v.cbegin(); it != v.cend(); ++it) {   // const_iterator — read-only, cannot modify *it
+    cout &lt;&lt; *it &lt;&lt; " ";
+    // *it = 99;    // COMPILE ERROR
+}
+
+for (auto it = v.rbegin(); it != v.rend(); ++it) {   // reverse_iterator — traverses BACKWARD
+    cout &lt;&lt; *it &lt;&lt; " ";
+}
+// 30 20 10 — note: ++ on a reverse_iterator actually moves it BACKWARD through the container</code></pre>
+
+  <h2>7. Iterator Invalidation (critical, ties back to Module 4.1)</h2>
+  <p>
+    Certain container operations invalidate existing iterators — using an invalidated iterator afterward is undefined behavior. This varies by container:
+  </p>
+  <table>
+    <thead>
+      <tr><th>Container</th><th>Invalidating operations</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>vector</code></td><td>Any insertion that triggers reallocation invalidates ALL iterators; erase invalidates iterators from that point onward</td></tr>
+      <tr><td><code>deque</code></td><td>Insertion/erasure at either end may invalidate all iterators (implementation-dependent)</td></tr>
+      <tr><td><code>list</code></td><td>Only the iterator to the specifically erased element is invalidated — all others remain valid (a key advantage)</td></tr>
+      <tr><td><code>map</code>/<code>set</code></td><td>Only the iterator to the specifically erased element is invalidated</td></tr>
+    </tbody>
+  </table>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {1, 2, 3, 4, 5};
+for (auto it = v.begin(); it != v.end(); ++it) {
+    if (*it == 3) {
+        v.erase(it);   // DANGEROUS — erase() invalidates `it`; using it (even in the loop's ++it) is undefined behavior
+    }
+}
+
+// CORRECT pattern — erase() returns a valid iterator to the element AFTER the one removed
+for (auto it = v.begin(); it != v.end(); ) {
+    if (*it == 3) {
+        it = v.erase(it);   // reassign it to erase()'s return value
+    } else {
+        ++it;
+    }
+}</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Why is <code>it != v.end()</code> preferred over <code>it &lt; v.end()</code> as the general iteration condition across all container types?</li>
+    <li>Explain the difference between forward, bidirectional, and random-access iterators, with one example container for each.</li>
+    <li>Why does <code>advance(it, n)</code> run in O(1) for a <code>vector</code> but O(n) for a <code>list</code>?</li>
+    <li>Explain iterator invalidation: why is erasing from a <code>vector</code> while iterating more dangerous than erasing from a <code>list</code> while iterating?</li>
+    <li>What is the relationship between raw pointers and iterators — why can a raw pointer be used as a valid iterator over a plain array?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program that uses iterators (not indices) to print a <code>vector&lt;int&gt;</code> in both forward and reverse order.</li>
+    <li>Write a program that correctly removes all even numbers from a <code>vector&lt;int&gt;</code> while iterating, using the erase()-returns-next-iterator pattern.</li>
+    <li>Write a program using <code>list&lt;int&gt;</code> and <code>advance()</code> to access and print the middle element of the list.</li>
+    <li>Write a program that uses a <code>set&lt;int&gt;::iterator</code> to print all elements strictly between two given values (using <code>lower_bound</code>/<code>upper_bound</code> from Module 4.4).</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

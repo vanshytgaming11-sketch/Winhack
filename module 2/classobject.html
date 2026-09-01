@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 2.2 — Classes &amp; Objects — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="classes-objects">
+  <h1>Module 2.2 — Classes &amp; Objects</h1>
+  <p>
+    A class is a user-defined blueprint (or template) that bundles data (attributes) and behavior (functions) together into a single unit. An object is a concrete instance created from that blueprint. Classes are the foundation of object-oriented programming in C++.
+  </p>
+
+  <h2>1. Defining a Class</h2>
+  <pre><code class="language-cpp">class Student {
+    public:
+        string name;    // data member
+        int age;          // data member
+
+        void display() {  // member function
+            cout &lt;&lt; "Name: " &lt;&lt; name &lt;&lt; ", Age: " &lt;&lt; age &lt;&lt; endl;
+        }
+};
+
+int main() {
+    Student s1;          // creating an OBJECT (instance) of class Student
+    s1.name = "Vinit";     // accessing data member using the dot operator
+    s1.age = 22;
+    s1.display();             // calling a member function
+    return 0;
+}</code></pre>
+
+  <h2>2. Data Members &amp; Member Functions</h2>
+  <p><strong>Data members</strong> are the variables that hold an object's state. <strong>Member functions</strong> define the object's behavior — operations it can perform, usually on its own data members.</p>
+
+  <pre><code class="language-cpp">class Rectangle {
+    public:
+        double length;
+        double width;
+
+        double area() {
+            return length * width;
+        }
+
+        double perimeter() {
+            return 2 * (length + width);
+        }
+};
+
+int main() {
+    Rectangle r1;
+    r1.length = 5.0;
+    r1.width = 3.0;
+    cout &lt;&lt; "Area: " &lt;&lt; r1.area() &lt;&lt; endl;           // 15
+    cout &lt;&lt; "Perimeter: " &lt;&lt; r1.perimeter() &lt;&lt; endl;    // 16
+    return 0;
+}</code></pre>
+
+  <h2>3. Access Specifiers</h2>
+  <p>Access specifiers control which parts of a class are visible from outside the class — this is the mechanism behind <strong>encapsulation</strong> (formalized in Module 2.4).</p>
+
+  <table>
+    <thead>
+      <tr><th>Specifier</th><th>Accessible from</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>public</code></td><td>Anywhere — inside the class, and from outside code using an object</td></tr>
+      <tr><td><code>private</code></td><td>Only from within the class's own member functions (default for <code>class</code>)</td></tr>
+      <tr><td><code>protected</code></td><td>Within the class, and derived classes (relevant once we cover inheritance — Module 2.4)</td></tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-cpp">class BankAccount {
+    private:
+        double balance;   // hidden from outside — can't be accessed directly
+
+    public:
+        void deposit(double amount) {
+            if (amount &gt; 0) balance += amount;
+        }
+
+        double getBalance() {
+            return balance;
+        }
+};
+
+int main() {
+    BankAccount acc;
+    acc.deposit(1000);
+    cout &lt;&lt; acc.getBalance();  // 1000 — accessed via a public function
+    // cout &lt;&lt; acc.balance;    // COMPILE ERROR — balance is private, not directly accessible
+    return 0;
+}</code></pre>
+
+  <h3><code>class</code> vs <code>struct</code> — the one real difference</h3>
+  <pre><code class="language-cpp">struct Point {
+    int x, y;   // PUBLIC by default in a struct
+};
+
+class Point2 {
+    int x, y;   // PRIVATE by default in a class
+};</code></pre>
+  <p>Functionally, <code>class</code> and <code>struct</code> are otherwise identical in C++ (both can have member functions, constructors, inheritance, etc.) — the <strong>only</strong> difference is the default access specifier: <code>public</code> for <code>struct</code>, <code>private</code> for <code>class</code>. By convention, <code>struct</code> is used for simple data-holding types, and <code>class</code> for types with behavior and invariants to protect.</p>
+
+  <h2>4. The <code>this</code> Pointer</h2>
+  <p>
+    Inside any non-static member function, <code>this</code> is an implicit pointer to the object on which the function was called. It's most commonly needed when a parameter name shadows a data member name.
+  </p>
+  <pre><code class="language-cpp">class Point {
+    public:
+        int x, y;
+
+        void setX(int x) {
+            this-&gt;x = x;   // `this-&gt;x` refers to the MEMBER, `x` (unqualified) refers to the PARAMETER
+        }
+};
+
+int main() {
+    Point p;
+    p.setX(10);
+    cout &lt;&lt; p.x; // 10
+    return 0;
+}</code></pre>
+
+  <p><code>this</code> is also used to return the current object by reference, enabling method chaining:</p>
+  <pre><code class="language-cpp">class Builder {
+    public:
+        int value = 0;
+        Builder&amp; add(int v) {
+            value += v;
+            return *this; // returns a reference to the current object
+        }
+};
+
+int main() {
+    Builder b;
+    b.add(5).add(10).add(2); // chained calls — each returns *this
+    cout &lt;&lt; b.value; // 17
+    return 0;
+}</code></pre>
+
+  <h2>5. Constructors</h2>
+  <p>A constructor is a special member function, automatically called when an object is created, typically used to initialize data members. It has the exact same name as the class and no return type (not even <code>void</code>).</p>
+
+  <h3>Default Constructor</h3>
+  <pre><code class="language-cpp">class Student {
+    public:
+        string name;
+        int age;
+
+        Student() {                 // default constructor — no parameters
+            name = "Unknown";
+            age = 0;
+            cout &lt;&lt; "Default constructor called" &lt;&lt; endl;
+        }
+};
+
+int main() {
+    Student s1; // constructor called automatically here
+    cout &lt;&lt; s1.name &lt;&lt; " " &lt;&lt; s1.age; // Unknown 0
+    return 0;
+}</code></pre>
+
+  <h3>Parameterized Constructor</h3>
+  <pre><code class="language-cpp">class Student {
+    public:
+        string name;
+        int age;
+
+        Student(string n, int a) {
+            name = n;
+            age = a;
+        }
+};
+
+int main() {
+    Student s1("Vinit", 22);   // parameterized construction
+    Student s2 = Student("Aman", 20); // equivalent alternate syntax
+    cout &lt;&lt; s1.name &lt;&lt; " " &lt;&lt; s1.age;
+    return 0;
+}</code></pre>
+
+  <h3>Constructor Initializer List (preferred, more efficient)</h3>
+  <pre><code class="language-cpp">class Student {
+    public:
+        string name;
+        int age;
+
+        Student(string n, int a) : name(n), age(a) {  // initializer list
+            // body can be empty, or contain additional logic
+        }
+};</code></pre>
+  <p>
+    The initializer list directly <em>initializes</em> members (calling their constructors with the given values), whereas assigning inside the body first default-constructs them and then assigns — an extra, wasted step for non-trivial types like <code>string</code>. For members that are <code>const</code> or references, the initializer list is not just preferred but <strong>mandatory</strong>, since they cannot be assigned to after construction.
+  </p>
+  <pre><code class="language-cpp">class Circle {
+    public:
+        const double PI;   // const member — MUST be set via initializer list
+        double radius;
+
+        Circle(double r) : PI(3.14159), radius(r) {}
+};</code></pre>
+
+  <h3>Constructor Overloading</h3>
+  <p>Like regular functions, constructors can be overloaded — a class can have multiple constructors with different parameter lists.</p>
+  <pre><code class="language-cpp">class Box {
+    public:
+        double length, width, height;
+
+        Box() : length(1), width(1), height(1) {}                    // default
+        Box(double side) : length(side), width(side), height(side) {} // cube
+        Box(double l, double w, double h) : length(l), width(w), height(h) {} // full
+
+        double volume() { return length * width * height; }
+};
+
+int main() {
+    Box b1;              // uses default constructor → volume 1
+    Box b2(5);             // uses single-param constructor → volume 125
+    Box b3(2, 3, 4);         // uses 3-param constructor → volume 24
+    cout &lt;&lt; b1.volume() &lt;&lt; " " &lt;&lt; b2.volume() &lt;&lt; " " &lt;&lt; b3.volume();
+    return 0;
+}</code></pre>
+
+  <h2>6. Destructors</h2>
+  <p>
+    A destructor is a special member function automatically called when an object is destroyed — either when it goes out of scope (stack object) or when explicitly <code>delete</code>d (heap object). Its main use is releasing resources the object acquired (dynamically allocated memory, file handles, etc.).
+  </p>
+  <pre><code class="language-cpp">class Student {
+    public:
+        string name;
+
+        Student(string n) : name(n) {
+            cout &lt;&lt; name &lt;&lt; " constructed" &lt;&lt; endl;
+        }
+
+        ~Student() {   // destructor — name preceded by ~, no parameters, no return type
+            cout &lt;&lt; name &lt;&lt; " destroyed" &lt;&lt; endl;
+        }
+};
+
+int main() {
+    {
+        Student s("Vinit");   // constructor runs: "Vinit constructed"
+    }                            // s goes out of scope here: "Vinit destroyed" prints automatically
+    cout &lt;&lt; "After block" &lt;&lt; endl;
+    return 0;
+}
+// Output:
+// Vinit constructed
+// Vinit destroyed
+// After block</code></pre>
+
+  <h3>Destructors and Dynamic Memory</h3>
+  <pre><code class="language-cpp">class IntArray {
+    public:
+        int *data;
+        int size;
+
+        IntArray(int s) : size(s) {
+            data = new int[size];   // resource acquired in constructor
+        }
+
+        ~IntArray() {
+            delete[] data;             // resource released in destructor — RAII pattern (Module 5.3)
+            cout &lt;&lt; "Memory freed" &lt;&lt; endl;
+        }
+};
+
+int main() {
+    IntArray arr(10);
+    // no need to manually delete arr.data — the destructor handles it automatically
+    // when arr goes out of scope at the end of main()
+    return 0;
+}</code></pre>
+  <p>This pattern — acquiring a resource in the constructor and releasing it in the destructor — is called <strong>RAII</strong> (Resource Acquisition Is Initialization), a foundational C++ idiom explored fully in Module 5.3 alongside smart pointers.</p>
+
+  <h3>Rules about Destructors</h3>
+  <ul>
+    <li>A class has exactly one destructor (cannot be overloaded — it takes no parameters).</li>
+    <li>Called automatically — never called directly by name (except via <code>delete</code> for heap objects, which invokes it internally).</li>
+    <li>If not explicitly defined, the compiler generates a default (empty) one.</li>
+    <li>Should be declared <code>virtual</code> in base classes intended for polymorphic use — deep-dive in Module 2.5.</li>
+  </ul>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>What is the only structural difference between <code>class</code> and <code>struct</code> in C++?</li>
+    <li>Why is a constructor initializer list generally preferred over assigning values inside the constructor body?</li>
+    <li>Why are <code>const</code> data members required to use the initializer list rather than assignment in the constructor body?</li>
+    <li>Explain the purpose of the <code>this</code> pointer with an example where it's necessary.</li>
+    <li>What is RAII, and how do constructors/destructors implement it?</li>
+  </ol>
+
+  <h3>Predict the Output</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">class A {
+    public:
+        A() { cout &lt;&lt; "Constructed "; }
+        ~A() { cout &lt;&lt; "Destroyed "; }
+};
+
+int main() {
+    A a1;
+    {
+        A a2;
+    }
+    cout &lt;&lt; "End ";
+}</code></pre>
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Design a class <code>Circle</code> with a private data member <code>radius</code>, a parameterized constructor, and public member functions <code>area()</code> and <code>circumference()</code>.</li>
+    <li>Design a class <code>BankAccount</code> with a private <code>balance</code>, a constructor that sets an initial balance, and member functions <code>deposit(double)</code>, <code>withdraw(double)</code> (reject if insufficient funds), and <code>getBalance()</code>.</li>
+    <li>Design a class <code>DynamicString</code> that stores a <code>char*</code> allocated in the constructor from a given C-string, and properly frees it in the destructor. Add a member function <code>length()</code> that returns the string's length.</li>
+    <li>Design a class <code>Point</code> with overloaded constructors: one default (0,0), one taking a single value (sets both x and y to it), and one taking two values. Add a <code>display()</code> function.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

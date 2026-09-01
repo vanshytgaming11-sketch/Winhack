@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 4.7 — Algorithms — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="algorithms">
+  <h1>Module 4.7 — Algorithms</h1>
+  <p>
+    The <code>&lt;algorithm&gt;</code> header provides a large library of generic, container-agnostic functions that operate on iterator ranges — meaning the same <code>sort()</code> call works identically whether you're sorting a <code>vector</code>, an array, or a <code>deque</code>. This section covers the algorithms most frequently used in interviews and everyday C++ code.
+  </p>
+
+  <h2>1. <code>sort()</code></h2>
+  <pre><code class="language-cpp">#include &lt;algorithm&gt;
+using namespace std;
+
+vector&lt;int&gt; v = {5, 2, 9, 1, 7};
+
+sort(v.begin(), v.end());                    // ascending → {1, 2, 5, 7, 9}
+sort(v.begin(), v.end(), greater&lt;int&gt;());       // descending → {9, 7, 5, 2, 1}
+
+// Custom comparator with a lambda
+sort(v.begin(), v.end(), [](int a, int b) {
+    return a &gt; b;   // return true if a should come BEFORE b
+});
+
+// Sorting a partial range — only the first 3 elements
+sort(v.begin(), v.begin() + 3);</code></pre>
+  <p><strong>Complexity:</strong> O(n log n) — typically implemented as introsort (a hybrid of quicksort, heapsort, and insertion sort for small ranges).</p>
+
+  <h3>Sorting a vector of pairs/custom objects</h3>
+  <pre><code class="language-cpp">vector&lt;pair&lt;int,string&gt;&gt; students = {{85,"Vinit"}, {92,"Aman"}, {78,"Priya"}};
+
+sort(students.begin(), students.end());  // sorts by .first automatically (lexicographic pair comparison)
+
+sort(students.begin(), students.end(), [](pair&lt;int,string&gt; &amp;a, pair&lt;int,string&gt; &amp;b) {
+    return a.second &lt; b.second;   // custom: sort by NAME instead of marks
+});</code></pre>
+
+  <h2>2. <code>reverse()</code></h2>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {1, 2, 3, 4, 5};
+reverse(v.begin(), v.end());   // → {5, 4, 3, 2, 1} — in place, O(n)
+
+string s = "hello";
+reverse(s.begin(), s.end());     // → "olleh" — works on strings too, since they support iterators</code></pre>
+
+  <h2>3. <code>find()</code></h2>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {10, 20, 30, 40};
+
+auto it = find(v.begin(), v.end(), 30);
+if (it != v.end()) {
+    cout &lt;&lt; "Found at index: " &lt;&lt; (it - v.begin());  // 2
+} else {
+    cout &lt;&lt; "Not found";
+}</code></pre>
+  <p><strong>Complexity:</strong> O(n) — <code>find()</code> is a linear scan, since it works on ANY iterator range (including unsorted ones) and has no way to skip ahead. For sorted data, <code>binary_search</code> (below) is dramatically faster.</p>
+
+  <h2>4. <code>count()</code></h2>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {1, 2, 2, 3, 2, 4};
+int c = count(v.begin(), v.end(), 2);
+cout &lt;&lt; c;   // 3 — number of times 2 appears</code></pre>
+
+  <h2>5. <code>binary_search()</code></h2>
+  <p><strong>Requires the range to already be sorted</strong> — returns only <code>true</code>/<code>false</code>, not a position:</p>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {1, 3, 5, 7, 9, 11};   // MUST be sorted for binary_search to work correctly
+
+cout &lt;&lt; binary_search(v.begin(), v.end(), 7);    // true
+cout &lt;&lt; binary_search(v.begin(), v.end(), 4);       // false — 4 isn't present
+
+// On UNSORTED data, binary_search gives UNDEFINED/INCORRECT results — always sort first!</code></pre>
+  <p><strong>Complexity:</strong> O(log n) — this is exactly why sorting first (O(n log n), one-time cost) is worth it if you need to perform many subsequent searches.</p>
+
+  <h2>6. <code>lower_bound()</code> and <code>upper_bound()</code></h2>
+  <p>
+    Also require sorted data. These return <strong>iterators</strong> (not booleans), pinpointing exact positions — extremely useful for counting occurrences, finding insertion points, or range queries.
+  </p>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {10, 20, 20, 20, 30, 40};
+
+auto lb = lower_bound(v.begin(), v.end(), 20);   // iterator to FIRST element &gt;= 20
+auto ub = upper_bound(v.begin(), v.end(), 20);     // iterator to FIRST element &gt; 20
+
+cout &lt;&lt; (lb - v.begin());    // 1 — index of first 20
+cout &lt;&lt; (ub - v.begin());      // 4 — index just past the last 20
+
+int countOf20 = ub - lb;          // 3 — count of 20s, computed via iterator distance, without any loop!
+
+// Finding an insertion point to keep a sorted vector sorted:
+auto pos = lower_bound(v.begin(), v.end(), 25);
+v.insert(pos, 25);   // inserts 25 in the correct sorted position</code></pre>
+
+  <h2>7. <code>min_element()</code> and <code>max_element()</code></h2>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {5, 2, 9, 1, 7};
+
+auto minIt = min_element(v.begin(), v.end());
+auto maxIt = max_element(v.begin(), v.end());
+
+cout &lt;&lt; *minIt &lt;&lt; " " &lt;&lt; *maxIt;      // 1 9
+cout &lt;&lt; (minIt - v.begin());                // 3 — INDEX of the minimum element</code></pre>
+  <p><strong>Complexity:</strong> O(n) — these work on unsorted data too, since they simply scan and track the extreme value (unlike binary_search/lower_bound, which require sorted input).</p>
+
+  <h2>8. Other Frequently Used Algorithms</h2>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {1, 2, 3, 4, 5};
+
+// accumulate — sum (or custom fold) over a range (needs &lt;numeric&gt;)
+#include &lt;numeric&gt;
+int total = accumulate(v.begin(), v.end(), 0);          // 15 — sum, starting from 0
+int product = accumulate(v.begin(), v.end(), 1, multiplies&lt;int&gt;()); // 120 — custom operation
+
+// unique — removes CONSECUTIVE duplicates (requires sorted input for a "true" dedupe)
+vector&lt;int&gt; v2 = {1, 1, 2, 2, 3, 1};
+auto newEnd = unique(v2.begin(), v2.end());   // {1, 2, 3, 1, ?, ?} — logically removes CONSECUTIVE dupes only
+v2.erase(newEnd, v2.end());                       // must erase the leftover "garbage" tail — {1, 2, 3, 1}
+
+// swap — exchanges two values
+int a = 5, b = 10;
+swap(a, b);    // a=10, b=5
+
+// all_of / any_of / none_of — check a condition across a range (needs a predicate)
+bool allPositive = all_of(v.begin(), v.end(), [](int x) { return x &gt; 0; });
+bool anyEven = any_of(v.begin(), v.end(), [](int x) { return x % 2 == 0; });
+
+// count_if — count elements satisfying a condition
+int evenCount = count_if(v.begin(), v.end(), [](int x) { return x % 2 == 0; });
+
+// for_each — apply a function to every element
+for_each(v.begin(), v.end(), [](int &amp;x) { x *= 2; }); // doubles every element in place</code></pre>
+
+  <h2>9. Complexity Summary Table</h2>
+  <table>
+    <thead>
+      <tr><th>Algorithm</th><th>Requires sorted input?</th><th>Complexity</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>sort()</code></td><td>No</td><td>O(n log n)</td></tr>
+      <tr><td><code>reverse()</code></td><td>No</td><td>O(n)</td></tr>
+      <tr><td><code>find()</code></td><td>No</td><td>O(n)</td></tr>
+      <tr><td><code>count()</code></td><td>No</td><td>O(n)</td></tr>
+      <tr><td><code>binary_search()</code></td><td>Yes</td><td>O(log n)</td></tr>
+      <tr><td><code>lower_bound()</code> / <code>upper_bound()</code></td><td>Yes</td><td>O(log n)</td></tr>
+      <tr><td><code>min_element()</code> / <code>max_element()</code></td><td>No</td><td>O(n)</td></tr>
+      <tr><td><code>accumulate()</code></td><td>No</td><td>O(n)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Why is <code>binary_search()</code> undefined/unreliable on unsorted data, while <code>find()</code> works correctly regardless of ordering?</li>
+    <li>Explain what <code>unique()</code> actually does — why is a subsequent <code>erase()</code> call typically required afterward to fully "clean up" the container?</li>
+    <li>Why is it worth paying the O(n log n) cost of sorting upfront if you plan to perform many subsequent lookups with <code>binary_search</code>/<code>lower_bound</code>?</li>
+    <li>What is the difference between <code>lower_bound()</code> and <code>upper_bound()</code> when searching for a value that appears multiple times?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program that sorts a <code>vector&lt;pair&lt;int,string&gt;&gt;</code> of (score, name) by score descending, then by name ascending for ties, using a custom lambda comparator.</li>
+    <li>Write a program that uses <code>lower_bound</code>/<code>upper_bound</code> to count how many times a given value appears in a sorted array, without any explicit loop.</li>
+    <li>Write a program using <code>accumulate</code> to compute both the sum and the product of a vector of integers.</li>
+    <li>Write a program that removes duplicates from an unsorted vector by first sorting it, then applying <code>unique</code> + <code>erase</code>.</li>
+    <li>Write a program that uses <code>count_if</code> to count how many elements in a vector are prime numbers (using a helper <code>isPrime()</code> function as the predicate).</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

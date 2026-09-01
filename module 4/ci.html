@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 4.8 — Complexity &amp; Internals — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="complexity-internals">
+  <h1>Module 4.8 — Complexity &amp; Internals</h1>
+  <p>
+    This module consolidates the internal implementation of every STL container covered so far — the "why" behind each container's time complexities from Modules 4.1–4.5. Interviewers frequently ask "how is X implemented internally, and why does that give it O(?) complexity for operation Y" — this is your single reference for that entire class of question.
+  </p>
+
+  <h2>1. <code>vector</code> → Dynamic Array</h2>
+  <p>
+    Internally a single contiguous block of heap memory, plus a tracked <code>size</code> (elements in use) and <code>capacity</code> (total allocated space). When <code>size</code> would exceed <code>capacity</code>, a NEW, larger block is allocated (commonly double the old capacity), all existing elements are copied/moved into it, and the old block is freed.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Operation</th><th>Complexity</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Random access <code>v[i]</code></td><td>O(1)</td><td>Direct address computation: <code>base + i * sizeof(T)</code></td></tr>
+      <tr><td><code>push_back</code></td><td>O(1) amortized</td><td>Usually just writes to the next free slot; occasionally triggers an O(n) reallocation, averaged out over many calls</td></tr>
+      <tr><td>Insert/erase at front or middle</td><td>O(n)</td><td>All subsequent elements must shift to fill/make the gap</td></tr>
+      <tr><td><code>pop_back</code></td><td>O(1)</td><td>Just decrements size — no shifting needed</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. <code>deque</code> → Block/Chunk Storage (Segmented Array)</h2>
+  <p>
+    Implemented as multiple fixed-size chunks of contiguous memory, tracked via an internal "map" array of pointers to each chunk. This indirection is what allows both ends to grow independently in O(1) — a new chunk can be allocated at either end without touching or moving any existing elements.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Operation</th><th>Complexity</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Random access <code>dq[i]</code></td><td>O(1)</td><td>Two-step lookup (find chunk, then offset within it) — still constant time, just slightly slower constant than <code>vector</code></td></tr>
+      <tr><td><code>push_front</code> / <code>push_back</code></td><td>O(1)</td><td>New chunks are allocated at either end independently — no shifting of existing chunks</td></tr>
+      <tr><td>Insert/erase in the middle</td><td>O(n)</td><td>Still requires shifting elements within/across chunks</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. <code>list</code> → Doubly Linked List</h2>
+  <p>
+    Each element is an individually heap-allocated node containing the value plus <code>prev</code> and <code>next</code> pointers. There is no contiguous memory and no way to jump to an arbitrary index without traversing node by node.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Operation</th><th>Complexity</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Random access</td><td>Not supported (would be O(n) if manually traversed)</td><td>No index-to-address formula exists — must follow pointers one by one</td></tr>
+      <tr><td>Insert/erase given an iterator/position</td><td>O(1)</td><td>Only a few pointers need relinking — no data shifting</td></tr>
+      <tr><td>Search for a value</td><td>O(n)</td><td>Must traverse from an end, checking each node</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. <code>set</code> / <code>map</code> → Self-Balancing Binary Search Tree (Red-Black Tree)</h2>
+  <p>
+    Elements are stored as nodes in a Red-Black Tree — a binary search tree that automatically re-balances itself after every insertion/deletion, guaranteeing the tree's height stays O(log n) regardless of insertion order (unlike a plain unbalanced BST, which can degrade to O(n) height in the worst case, e.g., inserting already-sorted data).
+  </p>
+  <table>
+    <thead>
+      <tr><th>Operation</th><th>Complexity</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Insert / Erase / Find</td><td>O(log n) — guaranteed, every time</td><td>Tree height is kept balanced at O(log n) via rotation rules after every modification</td></tr>
+      <tr><td>In-order traversal (i.e., iterating the container)</td><td>O(n), always in sorted order</td><td>A binary search tree's in-order traversal visits nodes in ascending key order by definition</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Why this guarantees sorted iteration:</strong> the BST invariant (left subtree &lt; node &lt; right subtree) means an in-order traversal (left → node → right, recursively) always visits nodes in ascending order — this is exactly why <code>set</code>/<code>map</code> iteration is always sorted, with zero extra sorting cost.</p>
+
+  <h2>5. <code>unordered_set</code> / <code>unordered_map</code> → Hash Table</h2>
+  <p>
+    Elements are distributed across an array of "buckets," with each element's bucket determined by <code>hash(key) % bucket_count</code>. Multiple elements landing in the same bucket (a collision) are typically chained together in a small linked list within that bucket.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Operation</th><th>Average complexity</th><th>Worst-case complexity</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Insert / Erase / Find</td><td>O(1)</td><td>O(n)</td><td>Average case: hash spreads elements evenly, each bucket has ~1 element. Worst case: all elements collide into one bucket, degrading to a linked-list scan</td></tr>
+    </tbody>
+  </table>
+  <p>
+    As more elements are inserted, the <strong>load factor</strong> (elements ÷ buckets) rises; once it crosses a threshold, the table automatically <strong>rehashes</strong> — allocates more buckets and redistributes all elements — to keep the average bucket size small and operations close to O(1).
+  </p>
+
+  <h2>6. <code>priority_queue</code> → Binary Heap</h2>
+  <p>
+    Internally, a <code>priority_queue</code> is a <code>vector</code> maintained in a special order satisfying the <strong>heap property</strong>: every parent node is ≥ (max-heap) or ≤ (min-heap) both its children. This is stored implicitly in a flat array — for a node at index <code>i</code>, its children are at indices <code>2i+1</code> and <code>2i+2</code>, and its parent is at <code>(i-1)/2</code> — no explicit tree pointers needed at all.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Operation</th><th>Complexity</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>top()</code></td><td>O(1)</td><td>The max (or min) element is always maintained at the root — index 0</td></tr>
+      <tr><td><code>push()</code></td><td>O(log n)</td><td>New element is added at the end, then "bubbled up" (swapped with its parent repeatedly) until the heap property is restored</td></tr>
+      <tr><td><code>pop()</code></td><td>O(log n)</td><td>Root is removed, the last element is moved to the root, then "sifted down" until the heap property is restored</td></tr>
+    </tbody>
+  </table>
+  <p>This structure is explored in full algorithmic depth in Module 6.7 (Heaps).</p>
+
+  <h2>7. Master Summary Table</h2>
+  <table>
+    <thead>
+      <tr><th>Container</th><th>Internal structure</th><th>Access</th><th>Insert/Erase (end)</th><th>Insert/Erase (middle)</th><th>Search</th><th>Ordered?</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>vector</code></td><td>Dynamic array</td><td>O(1)</td><td>O(1) amortized</td><td>O(n)</td><td>O(n)</td><td>Insertion order</td></tr>
+      <tr><td><code>deque</code></td><td>Segmented array</td><td>O(1)</td><td>O(1) both ends</td><td>O(n)</td><td>O(n)</td><td>Insertion order</td></tr>
+      <tr><td><code>list</code></td><td>Doubly linked list</td><td>Not supported</td><td>O(1)</td><td>O(1) given position</td><td>O(n)</td><td>Insertion order</td></tr>
+      <tr><td><code>set</code>/<code>map</code></td><td>Red-Black Tree</td><td>N/A (key-based)</td><td>O(log n)</td><td>O(log n)</td><td>O(log n)</td><td>Sorted by key</td></tr>
+      <tr><td><code>unordered_set</code>/<code>map</code></td><td>Hash table</td><td>N/A (key-based)</td><td>O(1) avg</td><td>O(1) avg</td><td>O(1) avg</td><td>Unspecified</td></tr>
+      <tr><td><code>priority_queue</code></td><td>Binary heap (on a vector)</td><td>Top only, O(1)</td><td>O(log n)</td><td>Not supported</td><td>Not supported</td><td>Priority order</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why a <code>vector</code>'s <code>push_back</code> is amortized O(1) but inserting at the front is O(n).</li>
+    <li>Why does a Red-Black Tree guarantee O(log n) operations, while a plain (unbalanced) BST could degrade to O(n)? What specifically causes an unbalanced BST to degrade, and with what input?</li>
+    <li>Explain, using the parent/child index formulas, why a binary heap can be efficiently represented in a flat array instead of using explicit tree node pointers.</li>
+    <li>Why does <code>unordered_map</code> have O(1) average but O(n) worst-case complexity, while <code>map</code> has a guaranteed O(log n) in all cases? In what scenario might you prefer the guaranteed bound over the better average case?</li>
+    <li>Explain why in-order traversal of a BST always yields sorted output, and how this directly explains <code>set</code>/<code>map</code> iteration behavior.</li>
+  </ol>
+
+  <h3>Applied</h3>
+  <ol>
+    <li>Given a use case requiring 100,000 random-access reads and only 10 insertions at the end, justify which sequence container is optimal and why.</li>
+    <li>Given a use case requiring frequent insertions/removals from both the front and back but no random access needed, justify the best container choice.</li>
+    <li>Given a use case requiring fast membership testing with no need for sorted output, justify choosing <code>unordered_set</code> over <code>set</code>, and describe one scenario where you'd choose <code>set</code> instead despite the performance cost.</li>
+    <li>Explain, step by step, what happens internally when <code>priority_queue::push()</code> is called on a max-heap containing <code>{50, 30, 40, 10, 20}</code> and the value <code>60</code> is pushed.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

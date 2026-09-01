@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1.1 — C++ Basics — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="basics">
+  <h1>Module 1.1 — C++ Basics</h1>
+
+  <h2>1. Introduction to C++</h2>
+  <p>
+    C++ is a general-purpose, compiled, statically-typed programming language created by <strong>Bjarne Stroustrup</strong> in 1979 at Bell Labs, initially as an extension of the C language (originally called "C with Classes"). It was designed to add object-oriented capabilities to C while retaining C's performance and low-level control over memory and hardware.
+  </p>
+  <p><strong>Why C++ matters for interviews and real-world systems:</strong></p>
+  <table>
+    <thead>
+      <tr><th>Property</th><th>What it means</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Compiled language</td><td>Source code is translated directly into machine code before execution → very fast runtime performance</td></tr>
+      <tr><td>Statically typed</td><td>Variable types are checked at compile time, not runtime → catches errors early</td></tr>
+      <tr><td>Multi-paradigm</td><td>Supports procedural, object-oriented, and generic programming in one language</td></tr>
+      <tr><td>Manual memory control</td><td>You control allocation/deallocation directly → power, but also responsibility</td></tr>
+      <tr><td>Rich standard library</td><td>The STL (Standard Template Library) provides ready-made, highly optimized data structures and algorithms</td></tr>
+    </tbody>
+  </table>
+  <p>
+    C++ is used in system software (OS kernels, browsers), game engines, high-frequency trading systems, embedded systems, and is one of the most commonly asked languages in DSA/competitive programming interviews because it gives you both control and a powerful standard library.
+  </p>
+
+  <h2>2. Compilation &amp; Execution</h2>
+  <p>
+    Unlike interpreted languages (Python, JavaScript), C++ code must be <strong>compiled</strong> into machine code before it runs. Understanding this pipeline is a common interview question in itself.
+  </p>
+
+  <h3>The Compilation Pipeline</h3>
+  <pre><code>Source Code (.cpp)
+      │
+      ▼
+1. Preprocessing   →  Handles # directives (#include, #define). Produces expanded source.
+      │
+      ▼
+2. Compilation     →  Translates preprocessed code into Assembly code.
+      │
+      ▼
+3. Assembly        →  Converts assembly into Object code (machine code, .o/.obj files).
+      │
+      ▼
+4. Linking         →  Combines object files + libraries into a single executable.
+      │
+      ▼
+Executable (.exe / a.out)</code></pre>
+
+  <p><strong>Step-by-step explanation:</strong></p>
+  <ol>
+    <li><strong>Preprocessing</strong> — The preprocessor scans for lines starting with <code>#</code> (like <code>#include &lt;iostream&gt;</code>) and textually substitutes/expands them before actual compilation begins. It does NOT understand C++ syntax — it's just text substitution.</li>
+    <li><strong>Compilation</strong> — The compiler (e.g., GCC, Clang, MSVC) checks syntax, performs type checking, and translates the code into assembly language specific to the target CPU architecture.</li>
+    <li><strong>Assembly</strong> — The assembler converts assembly code into binary object code (<code>.o</code> on Linux/Mac, <code>.obj</code> on Windows). This is machine code, but not yet a runnable program — function calls to external libraries aren't resolved yet.</li>
+    <li><strong>Linking</strong> — The linker resolves references between object files and libraries (like the C++ standard library), combining everything into a single executable binary.</li>
+  </ol>
+
+  <h3>Compiling from the command line (g++)</h3>
+  <pre><code class="language-bash"># Compile a single file into an executable
+g++ main.cpp -o main
+
+# Run it
+./main          # Linux/Mac
+main.exe        # Windows
+
+# Compile with warnings enabled (recommended for learning)
+g++ -Wall -Wextra main.cpp -o main
+
+# Compile with a specific C++ standard
+g++ -std=c++17 main.cpp -o main</code></pre>
+
+  <p><strong>Interview tip:</strong> If asked "What happens when you compile a C++ program?" — always mention all four stages (preprocessing → compilation → assembly → linking), not just "it turns into an exe."</p>
+
+  <h2>3. The <code>main()</code> Function</h2>
+  <p>Every C++ program must have exactly <strong>one</strong> <code>main()</code> function — it is the designated entry point where program execution begins.</p>
+
+  <pre><code class="language-cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    cout &lt;&lt; "Hello, World!" &lt;&lt; endl;
+    return 0;
+}</code></pre>
+
+  <p><strong>Breaking this down:</strong></p>
+  <ul>
+    <li><code>#include &lt;iostream&gt;</code> — a preprocessor directive that includes the input/output stream library, giving us access to <code>cin</code>, <code>cout</code>, etc.</li>
+    <li><code>using namespace std;</code> — brings all names from the <code>std</code> namespace into scope, so we can write <code>cout</code> instead of <code>std::cout</code>.</li>
+    <li><code>int main()</code> — the function returns an <code>int</code> to the operating system.</li>
+    <li><code>return 0;</code> — signals <strong>successful</strong> program termination to the OS. A non-zero return value conventionally signals an error occurred.</li>
+    <li><code>return 0;</code> is technically <strong>optional</strong> in <code>main()</code> specifically (and only <code>main()</code>) — if omitted, the compiler implicitly returns 0. This is a special-case rule unique to <code>main()</code>.</li>
+  </ul>
+
+  <p><strong>Valid signatures of <code>main()</code>:</strong></p>
+  <pre><code class="language-cpp">int main() { ... }                        // Most common
+int main(void) { ... }                    // Equivalent to above (C-style)
+int main(int argc, char* argv[]) { ... }  // Accepts command-line arguments</code></pre>
+
+  <ul>
+    <li><code>argc</code> (argument count) — number of command-line arguments passed, including the program name itself.</li>
+    <li><code>argv</code> (argument vector) — array of C-style strings containing the actual arguments.</li>
+  </ul>
+
+  <pre><code class="language-cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main(int argc, char* argv[]) {
+    cout &lt;&lt; "Number of arguments: " &lt;&lt; argc &lt;&lt; endl;
+    for (int i = 0; i &lt; argc; i++) {
+        cout &lt;&lt; "Argument " &lt;&lt; i &lt;&lt; ": " &lt;&lt; argv[i] &lt;&lt; endl;
+    }
+    return 0;
+}</code></pre>
+
+  <h2>4. Comments</h2>
+  <p>Comments are ignored by the compiler entirely — they exist purely for human readers.</p>
+
+  <pre><code class="language-cpp">// This is a single-line comment
+
+/*
+   This is a
+   multi-line comment
+*/
+
+int x = 5; // inline comment explaining this line
+
+/* Multi-line comments CANNOT be nested:
+   /* this will cause a compile error */
+*/</code></pre>
+
+  <p><strong>Best practices:</strong></p>
+  <ul>
+    <li>Use comments to explain <strong>why</strong>, not <strong>what</strong> (the code already shows what it does).</li>
+    <li>Avoid over-commenting obvious code (<code>x = x + 1; // increment x</code> is redundant).</li>
+    <li>Use comments to document function purpose, edge cases handled, and assumptions.</li>
+  </ul>
+
+  <h2>5. Variables</h2>
+  <p>A variable is a named location in memory used to store a value that can change during program execution.</p>
+
+  <h3>Declaration &amp; Initialization</h3>
+  <pre><code class="language-cpp">int age;               // Declaration only — value is garbage/undefined
+int age = 25;           // Declaration + initialization (copy-initialization)
+int age(25);            // Direct initialization
+int age{25};             // Brace/uniform initialization (C++11+, preferred — prevents narrowing)
+
+int a, b, c;               // Multiple declarations
+int a = 1, b = 2, c = 3;   // Multiple declarations with initialization</code></pre>
+
+  <p><strong>Why brace initialization <code>{}</code> is preferred (interview-relevant):</strong></p>
+  <pre><code class="language-cpp">int x = 3.9;    // Compiles silently — x becomes 3 (data loss, "narrowing")
+int y{3.9};      // Compile ERROR — narrowing conversion not allowed</code></pre>
+  <p>Brace initialization catches accidental data-loss bugs at compile time.</p>
+
+  <h3>Naming Rules</h3>
+  <ul>
+    <li>Must start with a letter or underscore (<code>_</code>), not a digit.</li>
+    <li>Can contain letters, digits, underscores only.</li>
+    <li>Case-sensitive (<code>age</code> and <code>Age</code> are different variables).</li>
+    <li>Cannot use C++ reserved keywords (<code>int</code>, <code>class</code>, <code>return</code>, etc.).</li>
+  </ul>
+
+  <pre><code class="language-cpp">int _score;      // valid
+int score2;      // valid
+int 2score;      // INVALID — starts with digit
+int my score;    // INVALID — contains space
+int class;       // INVALID — reserved keyword</code></pre>
+
+  <h3>Scope of Variables</h3>
+  <table>
+    <thead>
+      <tr><th>Scope type</th><th>Where declared</th><th>Lifetime</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Local variable</td><td>Inside a function/block <code>{}</code></td><td>Created on entry, destroyed on exit of block</td></tr>
+      <tr><td>Global variable</td><td>Outside all functions</td><td>Exists for entire program runtime</td></tr>
+      <tr><td>Static local variable</td><td>Inside function, with <code>static</code> keyword</td><td>Persists across function calls, initialized only once</td></tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int globalVar = 100; // Global — accessible anywhere in this file
+
+void counter() {
+    static int callCount = 0; // Initialized once, retains value between calls
+    callCount++;
+    cout &lt;&lt; "Called " &lt;&lt; callCount &lt;&lt; " times" &lt;&lt; endl;
+}
+
+int main() {
+    int localVar = 5; // Local to main only
+    counter(); // Called 1 times
+    counter(); // Called 2 times
+    counter(); // Called 3 times
+    return 0;
+}</code></pre>
+
+  <h2>6. Constants</h2>
+  <p>Constants are values that <strong>cannot</strong> be changed after initialization.</p>
+
+  <h3>Using <code>const</code></h3>
+  <pre><code class="language-cpp">const double PI = 3.14159;
+PI = 3.14; // Compile ERROR — cannot modify a const variable</code></pre>
+  <ul>
+    <li>Must be initialized at the time of declaration (you can't declare a <code>const</code> and assign later).</li>
+    <li>Enforced at <strong>compile time</strong>.</li>
+  </ul>
+
+  <h3>Using <code>#define</code> (macro constant — legacy C-style)</h3>
+  <pre><code class="language-cpp">#define PI 3.14159
+// The preprocessor textually replaces every occurrence of PI with 3.14159 before compilation</code></pre>
+
+  <p><strong><code>const</code> vs <code>#define</code> — a classic interview question:</strong></p>
+  <table>
+    <thead>
+      <tr><th><code>const</code></th><th><code>#define</code></th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Type-safe (compiler checks types)</td><td>No type checking — pure text substitution</td></tr>
+      <tr><td>Obeys scope rules</td><td>No scope — applies globally wherever included</td></tr>
+      <tr><td>Visible to debugger</td><td>Not visible to debugger (already replaced by preprocessor)</td></tr>
+      <tr><td>Preferred in modern C++</td><td>Avoid in modern C++ except for header guards</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>constexpr</code> (C++11+)</h3>
+  <pre><code class="language-cpp">constexpr int SIZE = 10; // Evaluated at COMPILE time, not runtime
+int arr[SIZE]; // Valid — SIZE must be known at compile time for array size</code></pre>
+  <p><code>constexpr</code> guarantees the value is computed at compile time (useful for array sizes, template parameters), whereas plain <code>const</code> may be initialized at runtime.</p>
+  <pre><code class="language-cpp">int x;
+cin &gt;&gt; x;
+const int a = x;        // valid — const, but runtime-initialized
+constexpr int b = x;    // COMPILE ERROR — x isn't known at compile time</code></pre>
+
+  <h2>7. Data Types</h2>
+  <p>C++ is statically typed — every variable must have a declared type.</p>
+
+  <h3>Fundamental (Primitive) Data Types</h3>
+  <table>
+    <thead>
+      <tr><th>Type</th><th>Typical Size (bytes)</th><th>Range (typical, 64-bit system)</th><th>Example</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>int</code></td><td>4</td><td>-2,147,483,648 to 2,147,483,647</td><td><code>int a = 10;</code></td></tr>
+      <tr><td><code>short</code></td><td>2</td><td>-32,768 to 32,767</td><td><code>short s = 100;</code></td></tr>
+      <tr><td><code>long</code></td><td>8 (4 on some systems)</td><td>Larger than int</td><td><code>long l = 100000L;</code></td></tr>
+      <tr><td><code>long long</code></td><td>8</td><td>±9.2 × 10¹⁸</td><td><code>long long x = 10000000000LL;</code></td></tr>
+      <tr><td><code>float</code></td><td>4</td><td>~7 decimal digits precision</td><td><code>float f = 3.14f;</code></td></tr>
+      <tr><td><code>double</code></td><td>8</td><td>~15 decimal digits precision</td><td><code>double d = 3.14159;</code></td></tr>
+      <tr><td><code>long double</code></td><td>12/16</td><td>Extended precision</td><td><code>long double ld;</code></td></tr>
+      <tr><td><code>char</code></td><td>1</td><td>-128 to 127 (or 0–255 unsigned)</td><td><code>char c = 'A';</code></td></tr>
+      <tr><td><code>bool</code></td><td>1</td><td><code>true</code> or <code>false</code></td><td><code>bool flag = true;</code></td></tr>
+      <tr><td><code>void</code></td><td>—</td><td>No type (used for functions with no return)</td><td><code>void func();</code></td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>Note on sizes:</strong> Exact sizes are platform/compiler-dependent (guaranteed only as <em>minimums</em> by the C++ standard). Always use <code>sizeof()</code> to check on your system:</p>
+  <pre><code class="language-cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    cout &lt;&lt; "int: " &lt;&lt; sizeof(int) &lt;&lt; " bytes" &lt;&lt; endl;
+    cout &lt;&lt; "double: " &lt;&lt; sizeof(double) &lt;&lt; " bytes" &lt;&lt; endl;
+    cout &lt;&lt; "char: " &lt;&lt; sizeof(char) &lt;&lt; " bytes" &lt;&lt; endl;
+    cout &lt;&lt; "bool: " &lt;&lt; sizeof(bool) &lt;&lt; " bytes" &lt;&lt; endl;
+    return 0;
+}</code></pre>
+
+  <h3>Type Modifiers</h3>
+  <pre><code class="language-cpp">signed int a;          // Can hold negative & positive (default for int)
+unsigned int b;        // Only 0 and positive — doubles the positive range
+short int c;           // Reduced size
+long int d;            // Extended size
+unsigned long long e;  // Largest unsigned integer type</code></pre>
+
+  <p><strong>Interview trap:</strong> Unsigned integer underflow.</p>
+  <pre><code class="language-cpp">unsigned int x = 0;
+x = x - 1;
+cout &lt;&lt; x; // Prints 4294967295 (wraps around!) — NOT -1</code></pre>
+  <p>This is a very common source of bugs in competitive programming (e.g., looping <code>for (unsigned int i = n-1; i &gt;= 0; i--)</code> when <code>n = 0</code> causes infinite loop).</p>
+
+  <h3>Derived &amp; User-Defined Types (preview — covered in depth later)</h3>
+  <pre><code class="language-cpp">int arr[10];          // Array — derived type
+int* ptr;             // Pointer — derived type
+int& ref = x;         // Reference — derived type
+struct Point { int x, y; }; // User-defined type
+class Circle { ... };       // User-defined type</code></pre>
+
+  <h2>8. Type Conversion &amp; Casting</h2>
+
+  <h3>Implicit Conversion (Type Coercion)</h3>
+  <p>The compiler automatically converts one data type to another when needed, following a hierarchy (smaller → larger types is "safe"/widening).</p>
+  <pre><code class="language-cpp">int a = 10;
+double b = a;      // int → double, implicit, safe (widening)
+cout &lt;&lt; b;          // 10
+
+double x = 9.7;
+int y = x;            // double → int, implicit, UNSAFE (narrowing) — truncates to 9
+cout &lt;&lt; y;             // 9 (not 10 — it truncates, doesn't round)
+
+char c = 'A';
+int ascii = c;          // char → int, implicit — gives ASCII value
+cout &lt;&lt; ascii;            // 65</code></pre>
+
+  <p><strong>Implicit conversion hierarchy (roughly, smaller to larger):</strong><br>
+  <code>bool → char → short → int → long → long long → float → double → long double</code></p>
+
+  <h3>Explicit Conversion (Casting)</h3>
+  <p>When you deliberately force a conversion:</p>
+  <pre><code class="language-cpp">// C-style cast (inherited from C, discouraged in modern C++)
+double pi = 3.14159;
+int truncated = (int)pi; // truncated = 3
+
+// Function-style cast
+int truncated2 = int(pi);
+
+// C++-style casts (preferred — covered in depth in Module 3.6)
+int truncated3 = static_cast&lt;int&gt;(pi);</code></pre>
+
+  <p><strong>Why avoid C-style casts:</strong> They're "too powerful" — a single <code>(int)x</code> can silently perform <code>static_cast</code>, <code>const_cast</code>, or <code>reinterpret_cast</code> depending on context, making bugs harder to catch. Modern C++ prefers explicit <code>static_cast&lt;&gt;</code>, <code>dynamic_cast&lt;&gt;</code>, etc. (full deep-dive in Module 3.6).</p>
+
+  <h3>Common Conversion Pitfalls (High interview relevance)</h3>
+  <pre><code class="language-cpp">int a = 7, b = 2;
+cout &lt;&lt; a / b;              // 3 — integer division truncates!
+cout &lt;&lt; (double)a / b;      // 3.5 — casting ONE operand to double forces float division
+cout &lt;&lt; a / (double)b;      // 3.5 — same effect
+
+float f = 0.1f + 0.2f;
+cout &lt;&lt; (f == 0.3f);        // Often FALSE — floating point precision issues!</code></pre>
+
+  <h2>9. Input / Output (I/O)</h2>
+  <p>C++ uses <strong>streams</strong> for I/O, defined in <code>&lt;iostream&gt;</code>.</p>
+  <table>
+    <thead>
+      <tr><th>Object</th><th>Purpose</th><th>Associated with</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>cin</code></td><td>Standard input</td><td>Keyboard</td></tr>
+      <tr><td><code>cout</code></td><td>Standard output</td><td>Console/screen</td></tr>
+      <tr><td><code>cerr</code></td><td>Standard error (unbuffered)</td><td>Console/screen</td></tr>
+      <tr><td><code>clog</code></td><td>Standard error (buffered)</td><td>Console/screen</td></tr>
+    </tbody>
+  </table>
+
+  <h3><code>cout</code> — Output</h3>
+  <pre><code class="language-cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    int age = 21;
+    cout &lt;&lt; "Age: " &lt;&lt; age &lt;&lt; endl;        // endl flushes buffer + newline
+    cout &lt;&lt; "Age: " &lt;&lt; age &lt;&lt; "\n";          // "\n" is faster (no flush)
+    cout &lt;&lt; "A" &lt;&lt; "B" &lt;&lt; "C";                 // Chaining with &lt;&lt;
+    return 0;
+}</code></pre>
+
+  <p><strong><code>endl</code> vs <code>"\n"</code> (common interview question):</strong> <code>endl</code> inserts a newline AND flushes the output buffer, which has a performance cost. <code>"\n"</code> just inserts a newline character. In performance-critical code (competitive programming), prefer <code>"\n"</code>.</p>
+
+  <h3><code>cin</code> — Input</h3>
+  <pre><code class="language-cpp">#include &lt;iostream&gt;
+using namespace std;
+
+int main() {
+    int age;
+    cout &lt;&lt; "Enter your age: ";
+    cin &gt;&gt; age;                    // Reads a single value
+
+    int a, b;
+    cin &gt;&gt; a &gt;&gt; b;                  // Reads multiple values, space/newline separated
+
+    string name;
+    cin &gt;&gt; name;                    // Reads a single WORD only (stops at whitespace)
+
+    string fullLine;
+    cin.ignore();                    // Clears leftover newline from buffer
+    getline(cin, fullLine);           // Reads an ENTIRE line, including spaces
+
+    cout &lt;&lt; "Name: " &lt;&lt; name &lt;&lt; ", Age: " &lt;&lt; age &lt;&lt; endl;
+    return 0;
+}</code></pre>
+
+  <p><strong>Critical gotcha — mixing <code>cin &gt;&gt;</code> and <code>getline()</code>:</strong></p>
+  <pre><code class="language-cpp">int age;
+string name;
+
+cin &gt;&gt; age;              // Leaves a trailing '\n' in the input buffer
+getline(cin, name);       // Immediately reads that leftover '\n' as an empty line!
+
+// Fix:
+cin &gt;&gt; age;
+cin.ignore();              // Discard the leftover newline
+getline(cin, name);         // Now works correctly</code></pre>
+
+  <h3>Faster I/O for Competitive Programming</h3>
+  <pre><code class="language-cpp">ios_base::sync_with_stdio(false);
+cin.tie(NULL);</code></pre>
+  <p>This disables synchronization between C++ streams and C's stdio, and untangles <code>cin</code> from auto-flushing <code>cout</code> — significantly speeding up I/O for programs with heavy input/output (common first line in competitive programming templates).</p>
+
+  <h2>10. Operators</h2>
+
+  <h3>Arithmetic Operators</h3>
+  <pre><code class="language-cpp">int a = 10, b = 3;
+cout &lt;&lt; a + b &lt;&lt; endl;   // 13
+cout &lt;&lt; a - b &lt;&lt; endl;    // 7
+cout &lt;&lt; a * b &lt;&lt; endl;     // 30
+cout &lt;&lt; a / b &lt;&lt; endl;      // 3  (integer division — truncates)
+cout &lt;&lt; a % b &lt;&lt; endl;       // 1  (modulo — remainder; undefined for floats without fmod)</code></pre>
+
+  <h3>Relational (Comparison) Operators</h3>
+  <pre><code class="language-cpp">a == b   // Equal to
+a != b   // Not equal to
+a &gt; b    // Greater than
+a &lt; b    // Less than
+a &gt;= b   // Greater than or equal to
+a &lt;= b   // Less than or equal to
+// All return a bool: true(1) or false(0)</code></pre>
+
+  <h3>Logical Operators</h3>
+  <pre><code class="language-cpp">bool p = true, q = false;
+p &amp;&amp; q   // Logical AND — true only if both true
+p || q   // Logical OR — true if at least one true
+!p       // Logical NOT — inverts the value</code></pre>
+
+  <p><strong>Short-circuit evaluation (important interview concept):</strong></p>
+  <pre><code class="language-cpp">int x = 0;
+if (x != 0 &amp;&amp; (10 / x &gt; 1)) { ... }
+// Safe! Since x != 0 is false, (10/x) is NEVER evaluated — no division-by-zero crash.</code></pre>
+
+  <h3>Assignment Operators</h3>
+  <pre><code class="language-cpp">int a = 10;
+a += 5;   // a = a + 5  → 15
+a -= 3;   // a = a - 3  → 12
+a *= 2;   // a = a * 2  → 24
+a /= 4;   // a = a / 4  → 6
+a %= 4;   // a = a % 4  → 2</code></pre>
+
+  <h3>Increment / Decrement Operators</h3>
+  <pre><code class="language-cpp">int a = 5;
+cout &lt;&lt; a++;   // Post-increment: prints 5, THEN a becomes 6
+cout &lt;&lt; a;      // 6
+
+int b = 5;
+cout &lt;&lt; ++b;    // Pre-increment: b becomes 6 FIRST, then prints 6
+cout &lt;&lt; b;       // 6</code></pre>
+
+  <p><strong>Interview trap:</strong></p>
+  <pre><code class="language-cpp">int i = 5;
+int result = i++ + ++i;
+// i++  → uses 5, i becomes 6
+// ++i  → i becomes 7, uses 7
+// result = 5 + 7 = 12, i = 7</code></pre>
+  <p>(This exact expression is technically undefined behavior pre-C++17 due to unsequenced modifications, but interviewers often still ask it to test understanding of pre/post increment — worth mentioning both the "expected" trace AND the UB caveat.)</p>
+
+  <h3>Bitwise Operators</h3>
+  <pre><code class="language-cpp">int a = 5;   // 0101
+int b = 3;    // 0011
+
+cout &lt;&lt; (a &amp; b);   // AND  → 0001 = 1
+cout &lt;&lt; (a | b);    // OR   → 0111 = 7
+cout &lt;&lt; (a ^ b);     // XOR  → 0110 = 6
+cout &lt;&lt; (~a);          // NOT  → flips all bits → -6 (two's complement)
+cout &lt;&lt; (a &lt;&lt; 1);       // Left shift → 1010 = 10 (multiply by 2)
+cout &lt;&lt; (a &gt;&gt; 1);        // Right shift → 0010 = 2 (divide by 2)</code></pre>
+  <p>Bitwise operators are heavily used in Module 6.13 (Bit Manipulation patterns).</p>
+
+  <h3>Ternary (Conditional) Operator</h3>
+  <pre><code class="language-cpp">int a = 10, b = 20;
+int max = (a &gt; b) ? a : b;    // max = 20
+// Equivalent to:
+// if (a &gt; b) max = a; else max = b;</code></pre>
+
+  <h3><code>sizeof</code> Operator</h3>
+  <pre><code class="language-cpp">cout &lt;&lt; sizeof(int);      // 4
+cout &lt;&lt; sizeof(double);    // 8
+int arr[10];
+cout &lt;&lt; sizeof(arr);       // 40 (10 * 4 bytes)</code></pre>
+
+  <h3>Operator Precedence (frequently tested)</h3>
+  <p>From highest to lowest (abbreviated, most relevant subset):</p>
+  <pre><code>()  []  ->  .                  (highest)
+!  ~  ++  --  (unary +/-)
+*  /  %
++  -
+&lt;&lt;  &gt;&gt;
+&lt;  &lt;=  &gt;  &gt;=
+==  !=
+&amp;
+^
+|
+&amp;&amp;
+||
+?:
+=  +=  -=  *=  /=  %=          (assignment)
+,                                (lowest, comma operator)</code></pre>
+
+  <pre><code class="language-cpp">int result = 2 + 3 * 4;   // 14, NOT 20 — * has higher precedence than +
+int r2 = (2 + 3) * 4;      // 20 — parentheses override precedence</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain the four stages of C++ compilation. What is the difference between the compiler and the linker?</li>
+    <li>Why is <code>return 0;</code> optional specifically inside <code>main()</code> but not inside any other function?</li>
+    <li>What is the difference between <code>const</code> and <code>constexpr</code>? Give an example where one works but the other doesn't.</li>
+    <li>Why does <code>unsigned int x = 0; x = x - 1;</code> not produce -1? Explain what actually happens.</li>
+    <li>What is the difference between <code>endl</code> and <code>"\n"</code>? When would you prefer one over the other?</li>
+    <li>Explain short-circuit evaluation with an example where it prevents a runtime crash.</li>
+    <li>What's wrong with this code, and how would you fix it?
+      <pre><code class="language-cpp">int age; string name;
+cin &gt;&gt; age;
+getline(cin, name);</code></pre>
+    </li>
+  </ol>
+
+  <h3>Predict the Output</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">int a = 5;
+cout &lt;&lt; a++ + ++a;</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">cout &lt;&lt; 7 / 2 &lt;&lt; " " &lt;&lt; 7.0 / 2 &lt;&lt; " " &lt;&lt; 7 / 2.0;</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">int x{3.9};</code></pre>
+      What happens here, and why?
+    </li>
+    <li>
+      <pre><code class="language-cpp">float f = 0.1f + 0.2f;
+cout &lt;&lt; (f == 0.3f);</code></pre>
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program that takes two integers as input and prints their sum, difference, product, quotient, and remainder — each on a separate line.</li>
+    <li>Write a program that reads a person's full name (with spaces) and age on two separate lines and prints a formatted greeting: <code>"Hello, &lt;name&gt;! You are &lt;age&gt; years old."</code> (Tests correct <code>cin</code>/<code>getline</code> handling.)</li>
+    <li>Write a program that swaps two integers <strong>without using a third (temporary) variable</strong>, using only arithmetic or bitwise operators.</li>
+    <li>Write a program that takes a temperature in Celsius and converts it to Fahrenheit using the formula <code>F = C * 9/5 + 32</code>. Ensure the division doesn't truncate (handle the integer-division pitfall).</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1.3 — Functions — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="functions">
+  <h1>Module 1.3 — Functions</h1>
+  <p>
+    A function is a named, reusable block of code that performs a specific task. Functions let you break a program into smaller, manageable pieces, avoid code duplication, and make programs easier to test and maintain.
+  </p>
+
+  <h2>1. Function Declaration &amp; Definition</h2>
+  <p>
+    A function has two parts: a <strong>declaration</strong> (also called a prototype — tells the compiler the function's name, return type, and parameters) and a <strong>definition</strong> (the actual body/implementation).
+  </p>
+
+  <pre><code class="language-cpp">// Declaration (prototype) — usually in a header or before main()
+int add(int a, int b);
+
+int main() {
+    int result = add(3, 4); // Function CALL
+    cout &lt;&lt; result &lt;&lt; endl; // 7
+    return 0;
+}
+
+// Definition — the actual implementation
+int add(int a, int b) {
+    return a + b;
+}</code></pre>
+
+  <p><strong>Why declare separately from defining?</strong> The compiler reads top to bottom. If <code>main()</code> calls <code>add()</code> before the compiler has seen <code>add()</code>'s definition, it needs the declaration first so it knows the function exists, what it returns, and what arguments it expects. Without a prior declaration or definition, you'd get a compile error: <em>"'add' was not declared in this scope."</em></p>
+
+  <pre><code class="language-cpp">// Declaration + definition combined (most common when function is small
+// or defined before it's used — no separate prototype needed)
+int add(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    cout &lt;&lt; add(3, 4) &lt;&lt; endl;
+    return 0;
+}</code></pre>
+
+  <h3>Anatomy of a Function</h3>
+  <pre><code class="language-cpp">returnType functionName(parameterType1 param1, parameterType2 param2) {
+    // function body
+    return value; // must match returnType (omit if returnType is void)
+}</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Part</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>returnType</code></td><td>Data type of the value the function sends back (<code>void</code> if nothing is returned)</td></tr>
+      <tr><td><code>functionName</code></td><td>Identifier used to call the function</td></tr>
+      <tr><td>Parameters</td><td>Inputs the function accepts, declared with types</td></tr>
+      <tr><td>Function body</td><td>Code that executes when the function is called</td></tr>
+      <tr><td><code>return</code></td><td>Sends a value back to the caller and exits the function immediately</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Parameters &amp; Return Values</h2>
+
+  <h3>Functions with no parameters / no return value</h3>
+  <pre><code class="language-cpp">void greet() {
+    cout &lt;&lt; "Hello!" &lt;&lt; endl;
+    // no return statement needed — void means "returns nothing"
+}
+
+int main() {
+    greet(); // Called like this, no value to capture
+    return 0;
+}</code></pre>
+
+  <h3>Functions with parameters and a return value</h3>
+  <pre><code class="language-cpp">int square(int n) {
+    return n * n;
+}
+
+int main() {
+    int result = square(5); // result = 25
+    cout &lt;&lt; square(5) + square(3) &lt;&lt; endl; // 25 + 9 = 34
+    return 0;
+}</code></pre>
+
+  <h3>Multiple return points</h3>
+  <p>A function can have multiple <code>return</code> statements, but execution stops at whichever one runs first.</p>
+  <pre><code class="language-cpp">string checkSign(int n) {
+    if (n &gt; 0) return "Positive";
+    if (n &lt; 0) return "Negative";
+    return "Zero";
+}</code></pre>
+
+  <h3>Local variables and scope inside functions</h3>
+  <p>Variables declared inside a function are local to it — they're created when the function is called and destroyed when it returns. They are not accessible outside the function.</p>
+  <pre><code class="language-cpp">int add(int a, int b) {
+    int sum = a + b; // local to add()
+    return sum;
+}
+
+int main() {
+    cout &lt;&lt; sum; // COMPILE ERROR — sum is not visible here
+    return 0;
+}</code></pre>
+
+  <h2>3. Pass by Value vs Pass by Reference</h2>
+  <p>This is one of the <strong>most frequently tested</strong> C++ concepts in interviews. It determines whether a function can modify the caller's original variable.</p>
+
+  <h3>Pass by Value (default)</h3>
+  <p>A <strong>copy</strong> of the argument is made and passed into the function. Changes inside the function do NOT affect the original variable.</p>
+  <pre><code class="language-cpp">void increment(int x) {
+    x = x + 1; // modifies the COPY only
+}
+
+int main() {
+    int a = 5;
+    increment(a);
+    cout &lt;&lt; a; // Still 5 — original is unchanged
+    return 0;
+}</code></pre>
+
+  <h3>Pass by Reference (using <code>&amp;</code>)</h3>
+  <p>Instead of copying the value, the function receives an <strong>alias</strong> (direct reference) to the original variable. Changes inside the function DO affect the caller's original variable.</p>
+  <pre><code class="language-cpp">void increment(int &amp;x) {
+    x = x + 1; // modifies the ORIGINAL directly
+}
+
+int main() {
+    int a = 5;
+    increment(a);
+    cout &lt;&lt; a; // 6 — original IS changed
+    return 0;
+}</code></pre>
+
+  <h3>Pass by Pointer (alternative way to achieve reference-like behavior)</h3>
+  <pre><code class="language-cpp">void increment(int *x) {
+    *x = *x + 1; // dereference, then modify
+}
+
+int main() {
+    int a = 5;
+    increment(&amp;a); // must pass the ADDRESS
+    cout &lt;&lt; a; // 6
+    return 0;
+}</code></pre>
+
+  <h3>Pass by Const Reference (efficiency + safety — very common in real code)</h3>
+  <p>
+    Passing large objects (like a <code>std::string</code> or a <code>std::vector</code>) by value copies the entire object every call — expensive. Passing by reference avoids the copy, but allows the function to modify the caller's data — often undesirable. <code>const &amp;</code> gives you the best of both: no copy, and the compiler prevents modification.
+  </p>
+  <pre><code class="language-cpp">void printName(const string &amp;name) {
+    cout &lt;&lt; name &lt;&lt; endl;
+    // name = "hacked"; // COMPILE ERROR — const prevents modification
+}</code></pre>
+
+  <h3>Comparison Table</h3>
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Syntax</th><th>Copies data?</th><th>Can modify original?</th><th>Typical use case</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Pass by value</td><td><code>void f(int x)</code></td><td>Yes</td><td>No</td><td>Small types (int, char, bool), no modification needed</td></tr>
+      <tr><td>Pass by reference</td><td><code>void f(int &amp;x)</code></td><td>No</td><td>Yes</td><td>Need to modify caller's variable</td></tr>
+      <tr><td>Pass by pointer</td><td><code>void f(int *x)</code></td><td>No</td><td>Yes (via dereference)</td><td>Optional parameters (pointer can be <code>nullptr</code>), C-style APIs</td></tr>
+      <tr><td>Pass by const reference</td><td><code>void f(const int &amp;x)</code></td><td>No</td><td>No</td><td>Large objects, read-only access, avoid copy overhead</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Default Arguments</h2>
+  <p>You can give parameters default values, used automatically when the caller omits that argument.</p>
+  <pre><code class="language-cpp">void greet(string name, string greeting = "Hello") {
+    cout &lt;&lt; greeting &lt;&lt; ", " &lt;&lt; name &lt;&lt; "!" &lt;&lt; endl;
+}
+
+int main() {
+    greet("Vinit");                 // Hello, Vinit!  (uses default)
+    greet("Vinit", "Good morning"); // Good morning, Vinit!  (overrides default)
+    return 0;
+}</code></pre>
+
+  <p><strong>Rule:</strong> Once a parameter has a default value, every parameter after it must also have one (defaults must be trailing/rightmost).</p>
+  <pre><code class="language-cpp">void f(int a, int b = 5, int c);       // COMPILE ERROR — c has no default after b does
+void f(int a, int b = 5, int c = 10);  // VALID</code></pre>
+
+  <p>Default arguments are specified in the <strong>declaration</strong>, not repeated in the definition if they're separate:</p>
+  <pre><code class="language-cpp">void greet(string name, string greeting = "Hello"); // declaration — default here
+
+void greet(string name, string greeting) { // definition — NO default repeated here
+    cout &lt;&lt; greeting &lt;&lt; ", " &lt;&lt; name &lt;&lt; "!" &lt;&lt; endl;
+}</code></pre>
+
+  <h2>5. Function Overloading</h2>
+  <p>
+    C++ allows multiple functions with the <strong>same name</strong> as long as their <strong>parameter lists differ</strong> (in number of parameters, or parameter types). The compiler picks the correct one at compile time based on the arguments used in the call — this is a form of <strong>compile-time (static) polymorphism</strong>.
+  </p>
+  <pre><code class="language-cpp">int add(int a, int b) {
+    return a + b;
+}
+
+double add(double a, double b) {
+    return a + b;
+}
+
+int add(int a, int b, int c) {
+    return a + b + c;
+}
+
+int main() {
+    cout &lt;&lt; add(2, 3) &lt;&lt; endl;         // calls int version → 5
+    cout &lt;&lt; add(2.5, 3.5) &lt;&lt; endl;       // calls double version → 6.0
+    cout &lt;&lt; add(1, 2, 3) &lt;&lt; endl;          // calls 3-param version → 6
+    return 0;
+}</code></pre>
+
+  <p><strong>What makes overloads valid:</strong></p>
+  <ul>
+    <li>Different number of parameters, OR</li>
+    <li>Different parameter types (return type ALONE is not enough to distinguish overloads)</li>
+  </ul>
+
+  <pre><code class="language-cpp">int f(int x);
+double f(int x); // COMPILE ERROR — differs only by return type, not allowed</code></pre>
+
+  <h3>Ambiguous Overload Calls (common interview trap)</h3>
+  <pre><code class="language-cpp">void f(int x)    { cout &lt;&lt; "int version"; }
+void f(double x) { cout &lt;&lt; "double version"; }
+
+int main() {
+    f(5);     // calls int version — exact match
+    f(5.0);   // calls double version — exact match
+    f('a');    // calls int version — char promotes to int
+    f(5L);      // AMBIGUOUS in some cases — long could convert to either int or double
+    return 0;
+}</code></pre>
+
+  <h2>6. Recursion</h2>
+  <p>
+    A recursive function is one that calls <strong>itself</strong>, directly or indirectly, to solve a smaller instance of the same problem. Every recursive function needs two essential parts:
+  </p>
+  <ul>
+    <li><strong>Base case</strong> — the condition where the function stops calling itself and returns directly (prevents infinite recursion).</li>
+    <li><strong>Recursive case</strong> — where the function calls itself with a smaller/simpler input, moving toward the base case.</li>
+  </ul>
+
+  <h3>Example: Factorial</h3>
+  <pre><code class="language-cpp">int factorial(int n) {
+    if (n == 0 || n == 1) return 1;  // BASE CASE
+    return n * factorial(n - 1);      // RECURSIVE CASE
+}
+
+int main() {
+    cout &lt;&lt; factorial(5); // 120
+    return 0;
+}</code></pre>
+
+  <h3>Tracing the Call Stack</h3>
+  <pre><code>factorial(5)
+= 5 * factorial(4)
+    = 5 * (4 * factorial(3))
+        = 5 * (4 * (3 * factorial(2)))
+            = 5 * (4 * (3 * (2 * factorial(1))))
+                = 5 * (4 * (3 * (2 * 1)))     ← base case hit, starts unwinding
+            = 5 * (4 * (3 * 2))
+        = 5 * (4 * 6)
+    = 5 * 24
+= 120</code></pre>
+
+  <p>
+    Each recursive call adds a new <strong>stack frame</strong> to the call stack (storing that call's local variables and return address). This is why deep/unbounded recursion causes a <strong>stack overflow</strong> — every call consumes stack memory, and there's no free lunch: recursion trades code elegance for stack space.
+  </p>
+
+  <h3>Example: Fibonacci (illustrates recursive inefficiency)</h3>
+  <pre><code class="language-cpp">int fib(int n) {
+    if (n &lt;= 1) return n; // base case
+    return fib(n - 1) + fib(n - 2); // two recursive calls
+}</code></pre>
+  <p>
+    This has exponential time complexity <strong>O(2ⁿ)</strong> because it recomputes the same subproblems repeatedly (e.g., <code>fib(3)</code> is computed multiple times while computing <code>fib(5)</code>). This exact inefficiency motivates <strong>memoization/dynamic programming</strong>, covered in depth in Module 6.10.
+  </p>
+
+  <h3>Example: Sum of digits (a common interview warm-up)</h3>
+  <pre><code class="language-cpp">int sumOfDigits(int n) {
+    if (n == 0) return 0;               // base case
+    return (n % 10) + sumOfDigits(n / 10); // recursive case
+}
+// sumOfDigits(1234) → 4 + sumOfDigits(123)
+//                   → 4 + 3 + sumOfDigits(12)
+//                   → 4 + 3 + 2 + sumOfDigits(1)
+//                   → 4 + 3 + 2 + 1 + sumOfDigits(0)
+//                   → 4 + 3 + 2 + 1 + 0 = 10</code></pre>
+
+  <h3>Recursion vs Iteration</h3>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>Recursion</th><th>Iteration</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Readability</td><td>Often cleaner for naturally recursive problems (trees, backtracking)</td><td>Can get complex for the same problems</td></tr>
+      <tr><td>Memory</td><td>Uses call stack — O(n) extra space for n calls</td><td>Typically O(1) extra space</td></tr>
+      <tr><td>Speed</td><td>Slightly slower — function call overhead</td><td>Generally faster</td></tr>
+      <tr><td>Risk</td><td>Stack overflow if too deep / no base case</td><td>No such risk</td></tr>
+      <tr><td>Best for</td><td>Trees, graphs, backtracking, divide &amp; conquer</td><td>Simple linear repetition</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Every loop can be rewritten as recursion, and vice versa</h3>
+  <pre><code class="language-cpp">// Iterative
+int factorialIter(int n) {
+    int result = 1;
+    for (int i = 2; i &lt;= n; i++) result *= i;
+    return result;
+}
+
+// Recursive (equivalent)
+int factorialRec(int n) {
+    if (n &lt;= 1) return 1;
+    return n * factorialRec(n - 1);
+}</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain the difference between pass by value, pass by reference, and pass by pointer. Give a scenario where each is the correct choice.</li>
+    <li>Why can't two functions be overloaded if they differ only in return type?</li>
+    <li>What is the rule regarding default arguments and parameter order? Why does this rule exist?</li>
+    <li>Explain what happens on the call stack when a recursive function executes, and why unbounded recursion causes a stack overflow.</li>
+    <li>Why is passing a large <code>std::string</code> by <code>const &amp;</code> generally better than passing it by value?</li>
+  </ol>
+
+  <h3>Predict the Output</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">void modify(int x) { x = 100; }
+int main() {
+    int a = 5;
+    modify(a);
+    cout &lt;&lt; a;
+}</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">void modify(int &amp;x) { x = 100; }
+int main() {
+    int a = 5;
+    modify(a);
+    cout &lt;&lt; a;
+}</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">int f(int x) { return x + 1; }
+double f(double x) { return x + 1.5; }
+int main() {
+    cout &lt;&lt; f(2) &lt;&lt; " " &lt;&lt; f(2.0);
+}</code></pre>
+    </li>
+    <li>Trace by hand: what does <code>fib(4)</code> return using the recursive Fibonacci function above, and how many total calls to <code>fib()</code> are made?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a function <code>bool isPrime(int n)</code> and use it in <code>main()</code> to print all prime numbers between 1 and 50.</li>
+    <li>Write a function <code>void swap(int &amp;a, int &amp;b)</code> that swaps two integers using pass-by-reference (no third variable, no return value).</li>
+    <li>Write an overloaded function <code>area()</code> — one version takes a single <code>double</code> (circle, radius), one takes two <code>double</code>s (rectangle, length &amp; width), and one takes three <code>double</code>s (triangle, using Heron's formula with three sides).</li>
+    <li>Write a recursive function <code>int power(int base, int exp)</code> that computes <code>base^exp</code> without using <code>pow()</code>. Then write an iterative version and compare.</li>
+    <li>Write a recursive function to reverse a string in place (no built-in reverse functions allowed).</li>
+    <li>Write a recursive function <code>int gcd(int a, int b)</code> implementing Euclid's algorithm, and trace its call stack for <code>gcd(48, 18)</code> in a comment above the function.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

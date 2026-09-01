@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 5.2 — Lambda Functions — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="lambda-functions">
+  <h1>Module 5.2 — Lambda Functions</h1>
+  <p>
+    A lambda expression is an anonymous, inline function — defined exactly where it's needed, without a separate named function declaration. Lambdas are used constantly with STL algorithms (Module 4.7) as custom comparators/predicates, and they solve function pointers' biggest limitation (Module 3.4): the ability to capture and use surrounding local variables.
+  </p>
+
+  <h2>1. Basic Syntax</h2>
+  <pre><code class="language-cpp">auto greet = []() {
+    cout &lt;&lt; "Hello from a lambda!" &lt;&lt; endl;
+};
+
+greet();  // calling it like a normal function — "Hello from a lambda!"</code></pre>
+
+  <h3>Anatomy of a Lambda</h3>
+  <pre><code class="language-cpp">[capture](parameters) -&gt; returnType {
+    // body
+};</code></pre>
+  <table>
+    <thead>
+      <tr><th>Part</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>[capture]</code></td><td>Which surrounding variables the lambda can access, and how (by value or reference)</td></tr>
+      <tr><td><code>(parameters)</code></td><td>Same as a normal function's parameter list</td></tr>
+      <tr><td><code>-&gt; returnType</code></td><td>Optional — usually omitted, since the compiler deduces it from the return statement</td></tr>
+      <tr><td><code>{ body }</code></td><td>The function's code</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Parameters and Return Types</h2>
+  <pre><code class="language-cpp">auto add = [](int a, int b) {
+    return a + b;    // return type auto-deduced as int
+};
+cout &lt;&lt; add(3, 4);      // 7
+
+auto divide = [](double a, double b) -&gt; double {   // explicit return type (rarely needed, but valid)
+    if (b == 0) return 0.0;
+    return a / b;
+};
+cout &lt;&lt; divide(10, 4);      // 2.5</code></pre>
+
+  <h2>3. Capture Lists — The Core Concept</h2>
+  <p>
+    The capture list <code>[...]</code> determines which variables from the enclosing scope the lambda body can use, and whether it gets a copy or a reference to them. This is exactly what a plain function pointer cannot do.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Capture syntax</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>[]</code></td><td>Captures nothing — the lambda can only use its own parameters, not surrounding variables</td></tr>
+      <tr><td><code>[x]</code></td><td>Captures <code>x</code> BY VALUE — a copy is made at the point the lambda is created</td></tr>
+      <tr><td><code>[&amp;x]</code></td><td>Captures <code>x</code> BY REFERENCE — the lambda sees live changes to the original <code>x</code></td></tr>
+      <tr><td><code>[=]</code></td><td>Captures ALL used surrounding variables BY VALUE, automatically</td></tr>
+      <tr><td><code>[&amp;]</code></td><td>Captures ALL used surrounding variables BY REFERENCE, automatically</td></tr>
+      <tr><td><code>[x, &amp;y]</code></td><td>Mixed — <code>x</code> by value, <code>y</code> by reference</td></tr>
+      <tr><td><code>[=, &amp;y]</code></td><td>Everything by value EXCEPT <code>y</code>, which is by reference</td></tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-cpp">int x = 10;
+
+auto byValue = [x]() {
+    cout &lt;&lt; x;   // uses the COPY captured when the lambda was created
+};
+
+auto byRef = [&amp;x]() {
+    cout &lt;&lt; x;    // uses a REFERENCE — sees the CURRENT value of x, even if it changes later
+};
+
+x = 100;
+byValue();   // 10 — captured copy, unaffected by the later change to x
+byRef();       // 100 — reference sees the updated value</code></pre>
+
+  <h3>Capture-by-Value Is a Snapshot at Creation Time — Common Gotcha</h3>
+  <pre><code class="language-cpp">vector&lt;function&lt;void()&gt;&gt; callbacks;
+
+for (int i = 0; i &lt; 3; i++) {
+    callbacks.push_back([i]() { cout &lt;&lt; i &lt;&lt; " "; });  // captures a SEPARATE copy of i each iteration
+}
+
+for (auto &amp;cb : callbacks) cb();  // 0 1 2 — each lambda remembers its own snapshot of i
+
+// Compare with capturing by reference to the SAME loop variable (a classic bug pattern in other contexts):
+int counter = 0;
+auto incrementer = [&amp;counter]() { counter++; };
+incrementer(); incrementer(); incrementer();
+cout &lt;&lt; counter;  // 3 — all three calls affected the SAME shared counter, since it's captured by reference</code></pre>
+
+  <h3>Mutable Lambdas</h3>
+  <p>By default, a value-captured variable inside a lambda is treated as <code>const</code> — the <code>mutable</code> keyword allows modifying the lambda's own internal copy (this does NOT affect the original variable):</p>
+  <pre><code class="language-cpp">int x = 10;
+
+auto modifyCopy = [x]() mutable {
+    x += 5;             // allowed ONLY because of `mutable` — modifies the lambda's OWN copy
+    cout &lt;&lt; x;             // 15
+};
+
+modifyCopy();
+cout &lt;&lt; x;                    // 10 — the ORIGINAL x is completely untouched; mutable only affects the copy</code></pre>
+
+  <h2>4. Lambdas with STL Algorithms — The Most Common Real-World Use</h2>
+  <pre><code class="language-cpp">vector&lt;int&gt; v = {5, 2, 9, 1, 7};
+
+// Custom sort comparator
+sort(v.begin(), v.end(), [](int a, int b) {
+    return a &gt; b;   // descending order
+});
+
+// Custom predicate for count_if
+int evenCount = count_if(v.begin(), v.end(), [](int x) {
+    return x % 2 == 0;
+});
+
+// Using a CAPTURED variable as a threshold — this is exactly what a plain function pointer CANNOT easily do
+int threshold = 5;
+int aboveThreshold = count_if(v.begin(), v.end(), [threshold](int x) {
+    return x &gt; threshold;   // threshold captured from the surrounding scope
+});
+
+// for_each with a lambda
+for_each(v.begin(), v.end(), [](int &amp;x) {
+    x *= 2;   // modifies elements in place — note the reference parameter
+});</code></pre>
+
+  <h2>5. Lambdas vs Function Pointers vs Named Functions</h2>
+  <table>
+    <thead>
+      <tr><th>Aspect</th><th>Named function</th><th>Function pointer</th><th>Lambda</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Requires separate declaration</td><td>Yes</td><td>Yes (points to one)</td><td>No — defined inline, exactly where used</td></tr>
+      <tr><td>Can capture surrounding variables</td><td>No (only via globals or explicit parameters)</td><td>No</td><td>Yes — via the capture list, its key advantage</td></tr>
+      <tr><td>Typical use</td><td>Reusable, named logic used in multiple places</td><td>Legacy C-style callbacks</td><td>One-off logic, especially as STL algorithm arguments</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Storing Lambdas — <code>auto</code> vs <code>std::function</code></h2>
+  <pre><code class="language-cpp">auto lam = [](int x) { return x * x; };   // auto — exact, lightweight, but the true type is compiler-internal/unnameable
+
+#include &lt;functional&gt;
+function&lt;int(int)&gt; f = [](int x) { return x * x; };  // std::function — a general "callable wrapper" type,
+                                                          // useful when you need to store a lambda in a
+                                                          // class member, a container, or pass it around
+                                                          // as a named type (full depth in Module 5.7)</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain the difference between <code>[x]</code> and <code>[&amp;x]</code> capture, with an example where the choice produces different observable behavior.</li>
+    <li>Why does a lambda that captures by value need the <code>mutable</code> keyword to modify its captured variable, and why doesn't that modification affect the original variable?</li>
+    <li>What is the key limitation of raw function pointers that lambdas solve?</li>
+    <li>In the loop example creating multiple lambdas that each capture <code>i</code> by value, why does each lambda "remember" a different value of <code>i</code>?</li>
+  </ol>
+
+  <h3>Predict the Output</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">int x = 5;
+auto byVal = [x]() { return x * 2; };
+auto byRef = [&amp;x]() { return x * 2; };
+x = 10;
+cout &lt;&lt; byVal() &lt;&lt; " " &lt;&lt; byRef();</code></pre>
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program that uses a lambda with <code>sort()</code> to sort a vector of strings by length instead of alphabetically.</li>
+    <li>Write a program that captures a "multiplier" variable by value in a lambda, and uses <code>for_each</code> to scale every element of a vector by that multiplier.</li>
+    <li>Write a program storing three different lambdas (add, subtract, multiply — each taking two ints) in a <code>vector&lt;function&lt;int(int,int)&gt;&gt;</code>, and call each one in a loop.</li>
+    <li>Write a program that uses a lambda capturing a running total by reference, called repeatedly via <code>for_each</code> to accumulate a sum manually (without using <code>accumulate()</code>).</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

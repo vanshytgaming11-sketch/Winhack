@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 2.5 — Advanced OOP — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="advanced-oop">
+  <h1>Module 2.5 — Advanced OOP</h1>
+  <p>
+    This module goes deeper into the mechanics behind runtime polymorphism (virtual functions, vtables), abstract classes, operator overloading, and two special access mechanisms: <code>friend</code> and <code>static</code> members. These are consistently among the most-asked C++ interview topics beyond the basics.
+  </p>
+
+  <h2>1. Function Overriding</h2>
+  <p>
+    Overriding occurs when a derived class provides its own implementation of a function that already exists in its base class, with the exact same signature (name, parameters, and const-ness).
+  </p>
+  <pre><code class="language-cpp">class Animal {
+    public:
+        void speak() {
+            cout &lt;&lt; "Generic animal sound" &lt;&lt; endl;
+        }
+};
+
+class Dog : public Animal {
+    public:
+        void speak() {                 // overrides Animal's speak()
+            cout &lt;&lt; "Woof!" &lt;&lt; endl;
+        }
+};
+
+int main() {
+    Dog d;
+    d.speak();  // "Woof!" — Dog's own version is used
+    return 0;
+}</code></pre>
+  <p><strong>But this alone is NOT enough for polymorphism through base-class pointers</strong> — that's exactly the gap <code>virtual</code> fills, shown next.</p>
+
+  <h2>2. Virtual Functions and Why They're Needed</h2>
+  <p>Without <code>virtual</code>, calling an overridden function through a base-class pointer/reference uses the <strong>static (declared) type</strong> of the pointer, not the actual object's type — this is called "static binding" and usually isn't what you want:</p>
+
+  <pre><code class="language-cpp">class Animal {
+    public:
+        void speak() {  // NOT virtual
+            cout &lt;&lt; "Generic animal sound" &lt;&lt; endl;
+        }
+};
+
+class Dog : public Animal {
+    public:
+        void speak() {
+            cout &lt;&lt; "Woof!" &lt;&lt; endl;
+        }
+};
+
+int main() {
+    Animal *a = new Dog();
+    a-&gt;speak();  // "Generic animal sound" — WRONG (from the caller's likely intent)!
+                    // Because speak() is not virtual, the compiler resolves the call
+                    // based on the POINTER's type (Animal*), not the actual object (Dog).
+    delete a;
+    return 0;
+}</code></pre>
+
+  <h3>The Fix — Declaring <code>virtual</code></h3>
+  <pre><code class="language-cpp">class Animal {
+    public:
+        virtual void speak() {   // virtual enables dynamic (runtime) binding
+            cout &lt;&lt; "Generic animal sound" &lt;&lt; endl;
+        }
+};
+
+class Dog : public Animal {
+    public:
+        void speak() override {  // `override` (C++11+) is optional but strongly recommended —
+                                    // it makes the compiler verify this actually overrides a base virtual function
+            cout &lt;&lt; "Woof!" &lt;&lt; endl;
+        }
+};
+
+int main() {
+    Animal *a = new Dog();
+    a-&gt;speak();  // "Woof!" — CORRECT — resolved at RUNTIME based on the actual object type
+    delete a;
+    return 0;
+}</code></pre>
+
+  <h3>Why <code>override</code> Matters</h3>
+  <pre><code class="language-cpp">class Animal {
+    public:
+        virtual void speak(int volume) { cout &lt;&lt; "..."; }
+};
+
+class Dog : public Animal {
+    public:
+        void speak(double volume) override { cout &lt;&lt; "Woof"; }
+        // COMPILE ERROR with override — this does NOT actually override speak(int),
+        // it's a completely different overload (parameter type mismatch: double vs int).
+        // Without `override`, this bug would compile silently and cause confusing behavior.
+};</code></pre>
+
+  <h3>How It Works Internally — the Vtable (conceptual, common interview question)</h3>
+  <p>
+    When a class has at least one virtual function, the compiler generates a hidden <strong>virtual table (vtable)</strong> — essentially an array of function pointers, one per virtual function, specific to that class. Every object of that class carries a hidden pointer (<strong>vptr</strong>) to its class's vtable. A call through a base pointer looks up the actual function to run via this vptr/vtable at runtime, rather than being hard-wired at compile time — this indirection is what enables dynamic dispatch, and also why virtual calls have a small (usually negligible) performance overhead compared to non-virtual calls.
+  </p>
+
+  <h2>3. Pure Virtual Functions &amp; Abstract Classes</h2>
+  <p>
+    A pure virtual function has no implementation in the base class — it's declared with <code>= 0</code>, and forces every derived class to provide its own implementation. A class containing at least one pure virtual function becomes an <strong>abstract class</strong> — it cannot be instantiated directly; it can only serve as a base class.
+  </p>
+
+  <pre><code class="language-cpp">class Shape {
+    public:
+        virtual double area() = 0;    // PURE virtual function — no body, ends with = 0
+        virtual void display() {         // regular virtual function — CAN have a default body
+            cout &lt;&lt; "Area: " &lt;&lt; area() &lt;&lt; endl; // calls the derived class's area() via polymorphism
+        }
+};
+
+class Circle : public Shape {
+    public:
+        double radius;
+        Circle(double r) : radius(r) {}
+        double area() override {           // MUST implement area() — required by the abstract base
+            return 3.14159 * radius * radius;
+        }
+};
+
+class Square : public Shape {
+    public:
+        double side;
+        Square(double s) : side(s) {}
+        double area() override {
+            return side * side;
+        }
+};
+
+int main() {
+    // Shape s;                // COMPILE ERROR — cannot instantiate an abstract class
+    Shape *shapes[2];
+    shapes[0] = new Circle(5);
+    shapes[1] = new Square(4);
+
+    for (int i = 0; i &lt; 2; i++) {
+        shapes[i]-&gt;display();    // polymorphic call — each prints its own correct area
+    }
+
+    delete shapes[0];
+    delete shapes[1];
+    return 0;
+}</code></pre>
+  <p>An abstract class effectively defines an <strong>interface</strong> or <strong>contract</strong>: "any class that wants to be a Shape MUST provide an <code>area()</code> implementation." This is a direct, formal mechanism for the abstraction principle introduced in Module 2.4.</p>
+
+  <h2>4. Virtual Destructors (critical, frequently missed)</h2>
+  <p>
+    If a base class is meant to be used polymorphically (deleted through a base-class pointer), its destructor <strong>must</strong> be declared <code>virtual</code> — otherwise deleting a derived object through a base pointer only calls the base class's destructor, leaking any resources the derived class allocated.
+  </p>
+  <pre><code class="language-cpp">class Base {
+    public:
+        ~Base() {                // NOT virtual — BUG waiting to happen
+            cout &lt;&lt; "Base destructor" &lt;&lt; endl;
+        }
+};
+
+class Derived : public Base {
+    public:
+        int *data;
+        Derived() { data = new int[100]; }
+        ~Derived() {
+            delete[] data;
+            cout &lt;&lt; "Derived destructor" &lt;&lt; endl;
+        }
+};
+
+int main() {
+    Base *b = new Derived();
+    delete b;   // Only "Base destructor" prints — Derived's destructor is SKIPPED!
+                  // data (the heap array) is LEAKED, because ~Derived() never ran.
+    return 0;
+}</code></pre>
+
+  <p><strong>Fix:</strong></p>
+  <pre><code class="language-cpp">class Base {
+    public:
+        virtual ~Base() {   // virtual destructor — ensures correct cleanup chain
+            cout &lt;&lt; "Base destructor" &lt;&lt; endl;
+        }
+};
+// Now: delete b; correctly calls ~Derived() first, then ~Base() — no leak.</code></pre>
+  <p><strong>Rule of thumb:</strong> if a class has any virtual function, or is ever intended to be used as a polymorphic base class, give it a virtual destructor.</p>
+
+  <h2>5. Operator Overloading</h2>
+  <p>
+    C++ allows most built-in operators (<code>+</code>, <code>-</code>, <code>==</code>, <code>&lt;&lt;</code>, etc.) to be redefined for user-defined types, so objects of your classes can be used with natural, intuitive syntax.
+  </p>
+
+  <pre><code class="language-cpp">class Point {
+    public:
+        int x, y;
+        Point(int x = 0, int y = 0) : x(x), y(y) {}
+
+        // Overload + as a member function
+        Point operator+(const Point &amp;other) {
+            return Point(x + other.x, y + other.y);
+        }
+
+        // Overload == as a member function
+        bool operator==(const Point &amp;other) {
+            return x == other.x &amp;&amp; y == other.y;
+        }
+};
+
+int main() {
+    Point p1(1, 2), p2(3, 4);
+    Point p3 = p1 + p2;      // calls operator+ → Point(4, 6)
+    cout &lt;&lt; p3.x &lt;&lt; " " &lt;&lt; p3.y;  // 4 6
+
+    cout &lt;&lt; (p1 == p2);        // 0 (false) — calls operator==
+    return 0;
+}</code></pre>
+
+  <h3>Overloading <code>&lt;&lt;</code> for <code>cout</code> (must be a non-member/friend function)</h3>
+  <pre><code class="language-cpp">class Point {
+    public:
+        int x, y;
+        Point(int x, int y) : x(x), y(y) {}
+
+        // Declared as a FRIEND so it can access private members if needed,
+        // and as a NON-member because the left operand (ostream&amp;) isn't a Point
+        friend ostream&amp; operator&lt;&lt;(ostream &amp;out, const Point &amp;p);
+};
+
+ostream&amp; operator&lt;&lt;(ostream &amp;out, const Point &amp;p) {
+    out &lt;&lt; "(" &lt;&lt; p.x &lt;&lt; ", " &lt;&lt; p.y &lt;&lt; ")";
+    return out;   // return by reference to allow chaining: cout &lt;&lt; p1 &lt;&lt; p2;
+}
+
+int main() {
+    Point p(3, 4);
+    cout &lt;&lt; p;   // (3, 4) — natural, readable syntax enabled by operator overloading
+    return 0;
+}</code></pre>
+  <p><strong>Why <code>&lt;&lt;</code> must be a non-member function:</strong> for a member function, the object on the <em>left</em> of the operator must be an instance of the class. But in <code>cout &lt;&lt; p</code>, the left operand is <code>cout</code> (an <code>ostream</code>), not a <code>Point</code> — so it can't be a member of <code>Point</code>. It must be a free function (optionally a <code>friend</code>, if it needs private access).</p>
+
+  <h2>6. Friend Functions and Friend Classes</h2>
+  <p>
+    A <code>friend</code> function or class is granted access to the private and protected members of the class that declares it as a friend — even though it isn't a member itself. Friendship must be explicitly granted; it is not inherited and not mutual.
+  </p>
+  <pre><code class="language-cpp">class Box {
+    private:
+        double width;
+
+    public:
+        Box(double w) : width(w) {}
+
+        friend void printWidth(const Box &amp;b);  // grants access to this specific function
+};
+
+void printWidth(const Box &amp;b) {
+    cout &lt;&lt; "Width: " &lt;&lt; b.width;  // can access PRIVATE member `width` — allowed because of friend
+}
+
+int main() {
+    Box b(10.5);
+    printWidth(b);
+    return 0;
+}</code></pre>
+
+  <h3>Friend Class</h3>
+  <pre><code class="language-cpp">class Engine {
+    private:
+        int horsepower = 300;
+        friend class Car;   // Car gets access to ALL private members of Engine
+};
+
+class Car {
+    public:
+        void showEnginePower(Engine &amp;e) {
+            cout &lt;&lt; e.horsepower;  // allowed — Car is a friend of Engine
+        }
+};</code></pre>
+  <p><strong>Use sparingly:</strong> friendship breaks encapsulation, so it should be reserved for tightly-coupled cases (like operator overloading needing private access) rather than general-purpose convenience.</p>
+
+  <h2>7. Static Members</h2>
+  <p>
+    A <code>static</code> data member is shared by <strong>all</strong> objects of a class — there's exactly one copy, regardless of how many objects exist. A <code>static</code> member function can be called without any object instance, and can only access other static members (it has no <code>this</code> pointer).
+  </p>
+
+  <pre><code class="language-cpp">class Counter {
+    public:
+        static int count;   // declaration — shared across ALL objects
+
+        Counter() {
+            count++;          // every new object increments the SAME shared counter
+        }
+
+        static int getCount() {   // static member function — no `this`, callable without an object
+            return count;
+        }
+};
+
+int Counter::count = 0;    // MUST define/initialize static members outside the class
+
+int main() {
+    Counter c1, c2, c3;
+    cout &lt;&lt; Counter::getCount();  // 3 — called via class name, not an object
+    cout &lt;&lt; c1.count;               // 3 — also accessible via an object, but still the SAME shared value
+    return 0;
+}</code></pre>
+
+  <p><strong>Key rules:</strong></p>
+  <ul>
+    <li>Static data members must be defined (and initialized) exactly once outside the class, in a <code>.cpp</code> file (except <code>static constexpr</code>, which can be initialized in-class).</li>
+    <li>Static member functions cannot access non-static (instance) members directly, since they have no specific object to work on — no <code>this</code> pointer exists inside them.</li>
+    <li>A common real use case: tracking how many objects of a class currently exist, or shared configuration/constants across all instances.</li>
+  </ul>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why calling an overridden (but non-virtual) function through a base class pointer calls the base version instead of the derived version.</li>
+    <li>What is a vtable, and how does it enable runtime polymorphism? (Conceptual explanation, no need for implementation-level detail.)</li>
+    <li>Why must a base class intended for polymorphic deletion have a virtual destructor? What specifically goes wrong if it doesn't?</li>
+    <li>Why can't the <code>&lt;&lt;</code> operator overload for printing an object be a member function of that class?</li>
+    <li>What is the difference between a static data member and a regular (instance) data member?</li>
+    <li>Why does friendship not violate encapsulation "by accident" — i.e., why is it considered a deliberate, explicit exception rather than a leak?</li>
+  </ol>
+
+  <h3>Predict the Output</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">class Base {
+    public:
+        virtual void show() { cout &lt;&lt; "Base"; }
+};
+class Derived : public Base {
+    public:
+        void show() override { cout &lt;&lt; "Derived"; }
+};
+
+int main() {
+    Base *b = new Derived();
+    b-&gt;show();
+    delete b;
+}</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">class Counter {
+    public:
+        static int count;
+        Counter() { count++; }
+};
+int Counter::count = 0;
+
+int main() {
+    Counter a, b;
+    { Counter c; }
+    cout &lt;&lt; Counter::count;
+}</code></pre>
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Design an abstract class <code>Shape</code> with a pure virtual <code>area()</code> and a pure virtual <code>perimeter()</code>. Derive <code>Rectangle</code> and <code>Triangle</code> classes, and demonstrate polymorphic calls through a <code>Shape*</code> array.</li>
+    <li>Design a <code>Base</code> and <code>Derived</code> class pair where <code>Derived</code> allocates heap memory in its constructor. Deliberately omit a virtual destructor first, demonstrate (in a comment) the resulting leak when deleted via a <code>Base*</code>, then fix it.</li>
+    <li>Overload the <code>+</code>, <code>-</code>, and <code>==</code> operators for a <code>Complex</code> number class (with <code>real</code> and <code>imaginary</code> parts). Also overload <code>&lt;&lt;</code> to print complex numbers in the form <code>a + bi</code>.</li>
+    <li>Design a class <code>Employee</code> with a <code>static int totalEmployees</code> that increments in the constructor and decrements in the destructor, and a static function <code>getTotalEmployees()</code>. Demonstrate the count changing correctly as objects are created and destroyed in different scopes.</li>
+    <li>Design two classes, <code>Wallet</code> (with a private <code>balance</code>) and <code>Bank</code>, where <code>Bank</code> is declared a friend of <code>Wallet</code> and has a function to directly audit (read) the wallet's private balance.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

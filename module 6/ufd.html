@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6.12 — Union-Find / DSU — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="union-find">
+  <h1>Module 6.12 — Union-Find / DSU</h1>
+  <p>
+    Disjoint Set Union (DSU), also called Union-Find, is a data structure that tracks a collection of disjoint (non-overlapping) sets, supporting two operations extremely efficiently: determining which set an element belongs to (<code>find</code>), and merging two sets together (<code>union</code>). It's the standard tool for connectivity and grouping problems on graphs.
+  </p>
+
+  <h2>1. The Core Idea — Parent Pointers</h2>
+  <p>
+    Each element points to a "parent" — following parent pointers repeatedly eventually reaches a <strong>root</strong>, which represents that entire set. Two elements are in the same set if and only if they share the same root.
+  </p>
+  <pre><code class="language-cpp">class DSU {
+    public:
+        vector&lt;int&gt; parent;
+
+        DSU(int n) {
+            parent.resize(n);
+            for (int i = 0; i &lt; n; i++) {
+                parent[i] = i;   // initially, every element is its OWN parent — n separate sets
+            }
+        }
+
+        int find(int x) {
+            if (parent[x] == x) return x;   // x IS the root of its set
+            return find(parent[x]);            // otherwise, follow the parent pointer up
+        }
+
+        void unite(int x, int y) {
+            int rootX = find(x);
+            int rootY = find(y);
+            if (rootX != rootY) {
+                parent[rootX] = rootY;   // merge: make one root point to the other
+            }
+        }
+};
+// Naive version — find() can degrade to O(n) if the tree becomes a long chain</code></pre>
+
+  <h2>2. The Naive Version's Problem — Long Chains</h2>
+  <pre><code>Without any optimization, repeated unions can build a long chain:
+
+0 -&gt; 1 -&gt; 2 -&gt; 3 -&gt; 4 -&gt; 5
+
+find(0) now requires following 5 parent pointers — O(n) in the worst case,
+which defeats the purpose of a fast connectivity structure. Two optimizations
+fix this: PATH COMPRESSION and UNION BY RANK.</code></pre>
+
+  <h2>3. Optimization 1 — Path Compression</h2>
+  <p>
+    During <code>find()</code>, after locating the root, directly re-point every node visited along the way straight to that root — flattening the tree so future <code>find()</code> calls on those same nodes are nearly instant.
+  </p>
+  <pre><code class="language-cpp">int find(int x) {
+    if (parent[x] == x) return x;
+    return parent[x] = find(parent[x]);   // PATH COMPRESSION: re-point x directly to the root
+                                              // as the recursion unwinds
+}
+// Every node on the path from x to the root gets flattened to point DIRECTLY at the root —
+// so the NEXT find() call on any of those nodes is O(1)</code></pre>
+
+  <h3>Visualizing Path Compression</h3>
+  <pre><code>Before find(4), assuming chain: 0-&gt;1-&gt;2-&gt;3-&gt;4-&gt;5 (5 is the root)
+
+find(0) traverses: 0-&gt;1-&gt;2-&gt;3-&gt;4-&gt;5, discovers root=5
+
+AFTER path compression, EVERY node visited now points DIRECTLY to 5:
+0-&gt;5, 1-&gt;5, 2-&gt;5, 3-&gt;5, 4-&gt;5
+
+Any FUTURE find() on 0, 1, 2, 3, or 4 is now O(1) — a single pointer hop</code></pre>
+
+  <h2>4. Optimization 2 — Union by Rank (or Size)</h2>
+  <p>
+    When merging two sets, always attach the SMALLER (lower rank/size) tree under the root of the LARGER one — this prevents chains from growing unnecessarily long in the first place, complementing path compression.
+  </p>
+  <pre><code class="language-cpp">class DSU {
+    public:
+        vector&lt;int&gt; parent, rank_;
+
+        DSU(int n) {
+            parent.resize(n);
+            rank_.assign(n, 0);
+            for (int i = 0; i &lt; n; i++) parent[i] = i;
+        }
+
+        int find(int x) {
+            if (parent[x] == x) return x;
+            return parent[x] = find(parent[x]);   // path compression
+        }
+
+        void unite(int x, int y) {
+            int rootX = find(x);
+            int rootY = find(y);
+            if (rootX == rootY) return;   // already in the same set — nothing to do
+
+            // UNION BY RANK — attach the smaller tree under the larger tree's root
+            if (rank_[rootX] &lt; rank_[rootY]) {
+                parent[rootX] = rootY;
+            } else if (rank_[rootX] &gt; rank_[rootY]) {
+                parent[rootY] = rootX;
+            } else {
+                parent[rootY] = rootX;   // equal rank — attach either way, then increment the new root's rank
+                rank_[rootX]++;
+            }
+        }
+};
+// With BOTH optimizations combined, find() and unite() run in amortized O(α(n)) time —
+// α is the INVERSE ACKERMANN function, which grows so slowly that it's effectively
+// constant (≤ 5) for any input size that could ever exist in practice. This is
+// considered "practically O(1)" for all real-world purposes.</code></pre>
+
+  <h2>5. Checking Connectivity</h2>
+  <pre><code class="language-cpp">bool connected(DSU &amp;dsu, int x, int y) {
+    return dsu.find(x) == dsu.find(y);
+}
+// O(α(n)) — effectively O(1), thanks to both optimizations</code></pre>
+
+  <h2>6. Kruskal's Minimum Spanning Tree (MST) — the Classic DSU Application</h2>
+  <p>
+    Kruskal's algorithm builds a minimum spanning tree by greedily processing edges in increasing weight order, adding each edge UNLESS it would form a cycle — and DSU is exactly the right tool to check "would this edge create a cycle?" in near-constant time.
+  </p>
+  <pre><code class="language-cpp">struct Edge {
+    int u, v, weight;
+};
+
+int kruskalMST(int n, vector&lt;Edge&gt; &amp;edges) {
+    sort(edges.begin(), edges.end(), [](Edge &amp;a, Edge &amp;b) {
+        return a.weight &lt; b.weight;   // process edges in ASCENDING weight order — greedy choice
+    });
+
+    DSU dsu(n);
+    int totalWeight = 0;
+    int edgesUsed = 0;
+
+    for (Edge &amp;e : edges) {
+        if (dsu.find(e.u) != dsu.find(e.v)) {   // adding this edge would NOT create a cycle
+            dsu.unite(e.u, e.v);
+            totalWeight += e.weight;
+            edgesUsed++;
+            if (edgesUsed == n - 1) break;   // an MST always has exactly n-1 edges — done early
+        }
+        // else: this edge would connect two nodes ALREADY in the same set — SKIP it, it'd form a cycle
+    }
+
+    return totalWeight;
+}
+// O(E log E) time — dominated by sorting the edges; the DSU operations themselves
+// are effectively O(1) each, contributing only O(E * α(n)) ≈ O(E) to the total</code></pre>
+  <p><strong>Why DSU is the perfect fit here:</strong> "would adding edge (u,v) create a cycle" is exactly equivalent to "are u and v already connected/in the same set" — a question DSU answers in near-constant time, which is why Kruskal's is efficient overall despite processing every edge.</p>
+
+  <h2>7. Connected Components Using DSU (alternative to BFS/DFS from Module 6.8)</h2>
+  <pre><code class="language-cpp">int countComponentsDSU(int n, vector&lt;pair&lt;int,int&gt;&gt; &amp;edges) {
+    DSU dsu(n);
+    for (auto &amp;[u, v] : edges) {
+        dsu.unite(u, v);
+    }
+
+    unordered_set&lt;int&gt; uniqueRoots;
+    for (int i = 0; i &lt; n; i++) {
+        uniqueRoots.insert(dsu.find(i));   // each distinct root represents one component
+    }
+    return uniqueRoots.size();
+}
+// O(n + E) effectively — an alternative to the BFS/DFS-based component counting
+// from Module 6.8, particularly natural when edges arrive as a simple list
+// rather than an adjacency structure</code></pre>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain why a naive DSU (no path compression, no union by rank) can degrade to O(n) per <code>find()</code> call, with an example sequence of unions that causes this.</li>
+    <li>Explain path compression — what exactly changes about the tree structure after a <code>find()</code> call with path compression enabled?</li>
+    <li>Why does union by rank specifically attach the smaller tree under the larger one, rather than an arbitrary choice?</li>
+    <li>Explain why checking "does edge (u,v) create a cycle" is equivalent to checking "are u and v in the same DSU set."</li>
+    <li>What is the practical significance of the inverse Ackermann function's growth rate for DSU's amortized complexity?</li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Implement a full DSU class with both path compression and union by rank, and demonstrate it correctly grouping a set of (x,y) union operations.</li>
+    <li>Write a function using DSU to count the number of provinces (connected groups of cities) given an n×n adjacency matrix of direct connections.</li>
+    <li>Write a function using DSU to detect whether adding a given list of edges to an initially-empty graph would create a cycle at any point, returning the FIRST edge that would do so (LeetCode's "Redundant Connection" problem).</li>
+    <li>Implement Kruskal's algorithm fully and trace through it manually (in comments) on a small 5-node weighted graph of your choosing, showing which edges get accepted vs skipped.</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

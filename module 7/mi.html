@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 7.2 — Mock Interviews — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="mock-interviews">
+  <h1>Module 7.2 — Mock Interviews</h1>
+  <p>
+    A mock interview simulates the real conditions of a technical interview: a single problem, a hard time limit, verbalized reasoning, and follow-up questions — conditions that practicing alone, untimed, in silence, does not replicate. This module provides the structure to run one, either solo (narrating out loud) or with a partner.
+  </p>
+
+  <h2>1. The 45-Minute Structure</h2>
+  <table>
+    <thead>
+      <tr><th>Phase</th><th>Duration</th><th>What happens</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Problem introduction</td><td>2 min</td><td>Read the problem statement once, ask clarifying questions (input size? duplicates allowed? negative numbers?)</td></tr>
+      <tr><td>Approach discussion</td><td>5–8 min</td><td>Talk through your approach OUT LOUD before coding — state the pattern, the target complexity, and any edge cases you're already anticipating</td></tr>
+      <tr><td>Coding</td><td>20–25 min</td><td>Write the solution while continuing to narrate your reasoning — treat silence as a red flag, not a neutral state</td></tr>
+      <tr><td>Testing</td><td>5 min</td><td>Trace through your code manually on the given example AND at least one edge case</td></tr>
+      <tr><td>Follow-up questions</td><td>5–10 min</td><td>Answer "what if the input were 10x larger," "can you reduce the space complexity," "what if X constraint changed"</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Why Verbalizing Matters — More Than It Seems</h2>
+  <p>
+    Interviewers evaluate communication as much as correctness. A candidate who silently produces a correct O(n) solution often scores WORSE than one who talks through a slightly slower approach first, explains the tradeoff, and then optimizes — because the interviewer needs to see your reasoning process to evaluate how you'd perform on a team, not just whether you can produce correct code.
+  </p>
+  <p><strong>Practical habit to build:</strong> narrate in this shape, consistently:</p>
+  <ul>
+    <li>"My first instinct is a brute-force approach that does X — that would be O(n²)."</li>
+    <li>"But I notice [property of the input] — that suggests I could use [pattern] instead, bringing it down to O(n log n) / O(n)."</li>
+    <li>"Let me code that up." (then narrate key decisions while typing, not everything)</li>
+    <li>"Let me trace through the example to check this works... [walk through it]."</li>
+    <li>"One edge case I should consider is [X] — let me verify that's handled."</li>
+  </ul>
+
+  <h2>3. Common Follow-Up Question Types (and how to prepare for them)</h2>
+  <table>
+    <thead>
+      <tr><th>Follow-up type</th><th>Example</th><th>What it's testing</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Scale-up</td><td>"What if the array had 10 billion elements and didn't fit in memory?"</td><td>Whether you understand your solution's actual bottleneck, and can reason about streaming/external approaches</td></tr>
+      <tr><td>Constraint change</td><td>"What if the array could contain duplicates?" / "What if it's not sorted anymore?"</td><td>Whether your solution's correctness genuinely depended on an assumption you may not have stated explicitly</td></tr>
+      <tr><td>Space optimization</td><td>"Can you do this in O(1) extra space?"</td><td>Whether you can identify and eliminate unnecessary auxiliary structures (recall Module 6.10's space-optimized DP)</td></tr>
+      <tr><td>Generalize</td><td>"What if we needed the K-th such answer, not just the first?"</td><td>Whether your approach is a one-off trick or built on a genuinely extensible pattern</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Running a Mock Interview Solo</h2>
+  <p>Without a partner, discipline substitutes for the interviewer's presence:</p>
+  <ol>
+    <li>Pick a problem you have NOT seen before (or haven't looked at in months) — familiarity defeats the exercise's purpose.</li>
+    <li>Set a hard timer. Do not pause it, even to "just think for a second" past the phase's allotted time.</li>
+    <li>Actually speak out loud, even alone — silently thinking through an approach exercises a different skill than articulating it in real time, and the gap between the two is exactly what mock interviews are meant to close.</li>
+    <li>Write your own follow-up questions in advance (sealed in a separate note) and open them only after your working solution is complete, to simulate not knowing what's coming.</li>
+  </ol>
+
+  <h2>5. Post-Interview Self-Review Template</h2>
+  <p>Immediately after each mock interview (not days later, while details are still fresh), record:</p>
+  <ul>
+    <li><strong>Pattern identified:</strong> which Module 6 sub-topic did this problem draw from?</li>
+    <li><strong>Time to first working approach:</strong> how many minutes elapsed before you had ANY correct-direction idea, even if suboptimal?</li>
+    <li><strong>Time to optimal complexity:</strong> did you reach the best achievable complexity, and if not, what did you miss?</li>
+    <li><strong>Communication gaps:</strong> were there moments of silence longer than ~30 seconds? What were you thinking during them that went unspoken?</li>
+    <li><strong>Follow-up performance:</strong> which follow-up questions did you answer confidently vs. struggle with?</li>
+  </ul>
+  <p>This log is the direct input to Module 7.3 — weak-area review only works if there's an honest record of where the actual gaps showed up, not a vague impression of "it went okay."</p>
+
+  <h2>Practice Questions</h2>
+  <p>This sub-topic has no separate practice problems — instead, run at least 3 full mock interviews using problems from Module 7.1's practice sets (ones you haven't already solved in that context), following the 45-minute structure above, and complete the self-review template after each one before proceeding to Module 7.3.</p>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

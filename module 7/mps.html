@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 7.1 — Mixed Practice Set — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="mixed-practice">
+  <h1>Module 7.1 — Mixed Practice Set</h1>
+  <p>
+    This module is structured differently from Modules 1–6: instead of teaching new concepts, it's a randomized, timed practice framework that forces you to first <strong>identify</strong> which pattern from Module 6 applies, before solving — this "pattern recognition under uncertainty" is the actual skill real interviews test, and it's not exercised by working through problems in topic order.
+  </p>
+
+  <h2>1. Why Mixed (Not Topic-Ordered) Practice Matters</h2>
+  <p>
+    When you solve 10 sliding window problems in a row (as in Module 6.2's practice questions), you already know it's a sliding window problem before reading it — the hard part is skipped. A real interview gives no such hint. This module's purpose is to remove that hint and rebuild the recognition step as a deliberate skill.
+  </p>
+
+  <h2>2. How to Structure a Practice Session</h2>
+  <table>
+    <thead>
+      <tr><th>Step</th><th>What to do</th><th>Time box</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1. Read &amp; restate</td><td>Read the problem once, then restate it in your own words out loud or in a comment — this catches misunderstandings early</td><td>1–2 min</td></tr>
+      <tr><td>2. Identify the pattern</td><td>Before writing any code, name which Module 6 pattern(s) could apply (two pointers? DP? graph BFS?) and why</td><td>2–3 min</td></tr>
+      <tr><td>3. State complexity target</td><td>Decide what time/space complexity you're aiming for BEFORE coding — this shapes which approach you pick</td><td>1 min</td></tr>
+      <tr><td>4. Code the solution</td><td>Implement, referring back to the relevant Module 6 sub-topic if you get stuck on syntax/mechanics</td><td>15–25 min</td></tr>
+      <tr><td>5. Test manually</td><td>Trace through at least one example AND one edge case (empty input, single element, all duplicates) by hand</td><td>3–5 min</td></tr>
+      <tr><td>6. Review &amp; log</td><td>Compare your approach to the optimal one; log which pattern this problem belonged to for weak-area tracking (Module 7.3)</td><td>3–5 min</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. Problem Set Structure — Spanning All of Module 6</h2>
+  <p>
+    Each set below intentionally mixes topics — do not solve them in order without first identifying the pattern for each independently. Suggested pacing: one set per session, 45–60 minutes total.
+  </p>
+
+  <h3>Practice Set A</h3>
+  <ol>
+    <li>Given an array of integers, find the length of the longest subarray with a sum equal to a given target (positive and negative numbers allowed).</li>
+    <li>Given the root of a binary tree, return the sum of values of its deepest leaves.</li>
+    <li>Given a list of flight tickets as (departure, arrival) pairs, reconstruct the itinerary assuming it starts from "JFK" (hint: this is a graph traversal in disguise).</li>
+    <li>Given an array of coin denominations and a target amount, determine the FEWEST number of coins needed to make that amount (or -1 if impossible).</li>
+    <li>Given a string, determine if it can be rearranged into a palindrome (no need to construct it — just determine feasibility).</li>
+  </ol>
+
+  <h3>Practice Set B</h3>
+  <ol>
+    <li>Given a matrix of 0s and 1s, find the largest square containing only 1s (hint: this is 2D DP).</li>
+    <li>Given a linked list, determine if it's a palindrome, using O(1) extra space.</li>
+    <li>Given an array of intervals, merge all overlapping intervals.</li>
+    <li>Given a set of courses with prerequisites, determine if it's possible to finish all courses (hint: this is cycle detection on a directed graph).</li>
+    <li>Given an array, find the K closest values to a given target X, returned in sorted order.</li>
+  </ol>
+
+  <h3>Practice Set C</h3>
+  <ol>
+    <li>Given a 2D grid representing a maze with obstacles, find the number of unique paths from top-left to bottom-right, moving only right or down.</li>
+    <li>Given an array representing a histogram, and an amount of rainfall, compute the total water trapped.</li>
+    <li>Given a string, generate all possible valid IP address combinations that can be formed from it.</li>
+    <li>Implement an LRU (Least Recently Used) cache with O(1) get and put operations (hint: combine a hash map with a doubly linked list).</li>
+    <li>Given a set of words, find if two words in the set are connected via a chain of single-letter transformations, each intermediate word also in the set (word ladder — BFS on an implicit graph).</li>
+  </ol>
+
+  <h2>4. Self-Diagnostic Questions After Each Problem</h2>
+  <ul>
+    <li>Did I correctly identify the pattern within the first 5 minutes, or did I need to try (and abandon) a wrong approach first?</li>
+    <li>Was my stated complexity target actually achieved by my final solution?</li>
+    <li>Did I handle the edge cases (empty input, single element, all-same values) without needing to patch my solution afterward?</li>
+    <li>Could I explain my approach out loud, clearly, in under 60 seconds?</li>
+  </ul>
+  <p>Answering "no" to any of these is exactly the signal Module 7.3 (Weak-Area Review) is designed to act on.</p>
+
+  <h2>Practice Questions</h2>
+  <p>The three problem sets above ARE this sub-topic's practice questions — there are no additional questions beyond them. Complete one full set per session, following the six-step structure in section 2, before moving to Module 7.2.</p>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

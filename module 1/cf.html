@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1.2 — Control Flow — WinHack</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="navbar">
+    <a class="brand" href="../index.html">WinHack</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="../courses.html">Courses</a>
+      <a href="../cpp.html">C++ Track</a>
+      <a href="../certificate.html">Certificate</a>
+    </nav>
+  </header>
+  <div class="lesson-layout">
+    <aside class="toc" id="toc" aria-label="On this page"></aside>
+    <main class="lesson">
+<section id="control-flow">
+  <h1>Module 1.2 — Control Flow</h1>
+  <p>
+    Control flow statements determine the order in which instructions execute. By default, C++ executes statements sequentially, top to bottom — control flow constructs let you branch, repeat, or skip execution based on conditions.
+  </p>
+
+  <h2>1. The <code>if</code> / <code>else if</code> / <code>else</code> Statement</h2>
+
+  <h3>Basic <code>if</code></h3>
+  <pre><code class="language-cpp">int age = 20;
+if (age &gt;= 18) {
+    cout &lt;&lt; "Adult" &lt;&lt; endl;
+}</code></pre>
+  <p>The block <code>{}</code> executes only if the condition inside <code>()</code> evaluates to <code>true</code> (non-zero). If the block has a single statement, <code>{}</code> is technically optional — but omitting it is a common source of bugs (see below), so always use braces.</p>
+
+  <h3><code>if</code> / <code>else</code></h3>
+  <pre><code class="language-cpp">int age = 15;
+if (age &gt;= 18) {
+    cout &lt;&lt; "Adult" &lt;&lt; endl;
+} else {
+    cout &lt;&lt; "Minor" &lt;&lt; endl;
+}</code></pre>
+
+  <h3><code>if</code> / <code>else if</code> / <code>else</code> chain</h3>
+  <pre><code class="language-cpp">int marks = 72;
+
+if (marks &gt;= 90) {
+    cout &lt;&lt; "Grade A" &lt;&lt; endl;
+} else if (marks &gt;= 75) {
+    cout &lt;&lt; "Grade B" &lt;&lt; endl;
+} else if (marks &gt;= 60) {
+    cout &lt;&lt; "Grade C" &lt;&lt; endl;
+} else {
+    cout &lt;&lt; "Grade F" &lt;&lt; endl;
+}
+// Output: Grade C</code></pre>
+  <p>Only <strong>one</strong> branch executes — the first condition that evaluates to <code>true</code>. Order matters: conditions are checked top-to-bottom, and evaluation stops at the first match.</p>
+
+  <h3>The Dangling <code>else</code> Problem (classic interview trap)</h3>
+  <pre><code class="language-cpp">if (a &gt; 0)
+    if (b &gt; 0)
+        cout &lt;&lt; "Both positive";
+else
+    cout &lt;&lt; "a is not positive";  // WRONG ASSUMPTION!</code></pre>
+  <p><strong>The <code>else</code> always binds to the nearest unmatched <code>if</code></strong> — so this <code>else</code> actually pairs with <code>if (b &gt; 0)</code>, NOT <code>if (a &gt; 0)</code>, even though the indentation misleadingly suggests otherwise. This prints nothing if <code>a &lt;= 0</code>, which is likely not the intended behavior.</p>
+
+  <p><strong>Fix — always use braces:</strong></p>
+  <pre><code class="language-cpp">if (a &gt; 0) {
+    if (b &gt; 0) {
+        cout &lt;&lt; "Both positive";
+    }
+} else {
+    cout &lt;&lt; "a is not positive";
+}</code></pre>
+
+  <h3>Nested Conditions</h3>
+  <pre><code class="language-cpp">int a = 15, b = 20, c = 10;
+
+if (a &gt; b) {
+    if (a &gt; c) {
+        cout &lt;&lt; "a is largest" &lt;&lt; endl;
+    } else {
+        cout &lt;&lt; "c is largest" &lt;&lt; endl;
+    }
+} else {
+    if (b &gt; c) {
+        cout &lt;&lt; "b is largest" &lt;&lt; endl;
+    } else {
+        cout &lt;&lt; "c is largest" &lt;&lt; endl;
+    }
+}</code></pre>
+  <p>Deep nesting hurts readability. In interviews, prefer combining conditions or using early returns where possible:</p>
+  <pre><code class="language-cpp">// Cleaner alternative using logical operators
+if (a &gt;= b &amp;&amp; a &gt;= c) cout &lt;&lt; "a is largest";
+else if (b &gt;= a &amp;&amp; b &gt;= c) cout &lt;&lt; "b is largest";
+else cout &lt;&lt; "c is largest";</code></pre>
+
+  <h2>2. The <code>switch</code> Statement</h2>
+  <p><code>switch</code> is used when comparing a <strong>single variable</strong> against multiple <strong>constant</strong> values — a cleaner alternative to long <code>if-else if</code> chains in that specific case.</p>
+
+  <pre><code class="language-cpp">int day = 3;
+
+switch (day) {
+    case 1:
+        cout &lt;&lt; "Monday";
+        break;
+    case 2:
+        cout &lt;&lt; "Tuesday";
+        break;
+    case 3:
+        cout &lt;&lt; "Wednesday";
+        break;
+    case 4:
+        cout &lt;&lt; "Thursday";
+        break;
+    default:
+        cout &lt;&lt; "Invalid day";
+}
+// Output: Wednesday</code></pre>
+
+  <h3>Rules &amp; Constraints</h3>
+  <ul>
+    <li>The switch expression must evaluate to an <strong>integral or enum type</strong> (<code>int</code>, <code>char</code>, <code>enum</code> — NOT <code>float</code>, <code>double</code>, or <code>string</code> in standard C++).</li>
+    <li><code>case</code> labels must be <strong>compile-time constants</strong> (no variables, no ranges like <code>case 1-5:</code>).</li>
+    <li><code>default</code> is optional but strongly recommended — catches unhandled cases.</li>
+    <li><code>break</code> exits the switch. <strong>Without <code>break</code>, execution "falls through"</strong> to the next case.</li>
+  </ul>
+
+  <h3>Fall-Through Behavior (heavily tested in interviews)</h3>
+  <pre><code class="language-cpp">int x = 2;
+
+switch (x) {
+    case 1:
+        cout &lt;&lt; "One ";
+    case 2:
+        cout &lt;&lt; "Two ";
+    case 3:
+        cout &lt;&lt; "Three ";
+        break;
+    case 4:
+        cout &lt;&lt; "Four ";
+}
+// Output: Two Three
+// Execution starts at case 2 and "falls through" into case 3
+// because there's no break after case 2, then stops at the break in case 3.</code></pre>
+
+  <p><strong>Fall-through can be intentional</strong> — used to group multiple cases with shared logic:</p>
+  <pre><code class="language-cpp">char grade = 'B';
+
+switch (grade) {
+    case 'A':
+    case 'B':
+    case 'C':
+        cout &lt;&lt; "Pass";
+        break;
+    case 'F':
+        cout &lt;&lt; "Fail";
+        break;
+    default:
+        cout &lt;&lt; "Invalid grade";
+}
+// Output: Pass
+// case 'A', 'B', 'C' share the same code block since they have no break between them</code></pre>
+
+  <h3><code>switch</code> vs <code>if-else</code> — When to use which</h3>
+  <table>
+    <thead>
+      <tr><th>Use <code>switch</code> when</th><th>Use <code>if-else</code> when</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Comparing one variable against several constants</td><td>Comparing ranges (<code>x &gt; 10 &amp;&amp; x &lt; 20</code>)</td></tr>
+      <tr><td>Values are integral/enum/char</td><td>Comparing multiple different variables</td></tr>
+      <tr><td>You want potentially faster jump-table dispatch</td><td>Conditions involve complex boolean logic</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. Loops</h2>
+  <p>Loops repeat a block of code while a condition holds true.</p>
+
+  <h3><code>for</code> Loop</h3>
+  <p>Best when the number of iterations is known/countable in advance.</p>
+  <pre><code class="language-cpp">for (int i = 0; i &lt; 5; i++) {
+    cout &lt;&lt; i &lt;&lt; " ";
+}
+// Output: 0 1 2 3 4</code></pre>
+
+  <p><strong>Anatomy of a <code>for</code> loop:</strong></p>
+  <pre><code class="language-cpp">for (initialization; condition; update) {
+    // body
+}</code></pre>
+  <ol>
+    <li><strong>Initialization</strong> — runs once, before the loop starts (<code>int i = 0</code>).</li>
+    <li><strong>Condition</strong> — checked <em>before</em> every iteration; loop continues while <code>true</code>.</li>
+    <li><strong>Update</strong> — runs <em>after</em> each iteration's body (<code>i++</code>).</li>
+  </ol>
+
+  <pre><code class="language-cpp">// Multiple variables in a for loop
+for (int i = 0, j = 10; i &lt; j; i++, j--) {
+    cout &lt;&lt; i &lt;&lt; "-" &lt;&lt; j &lt;&lt; " ";
+}
+// Output: 0-10 1-9 2-8 3-7 4-6
+
+// Infinite loop (deliberate, common in competitive programming with internal break)
+for (;;) {
+    cout &lt;&lt; "runs forever unless broken" &lt;&lt; endl;
+    break; // needed to actually stop
+}
+
+// Reverse iteration
+for (int i = 9; i &gt;= 0; i--) {
+    cout &lt;&lt; i &lt;&lt; " ";
+}
+// Output: 9 8 7 6 5 4 3 2 1 0</code></pre>
+
+  <p><strong>Range-based <code>for</code> loop (C++11+)</strong> — iterates directly over containers/arrays:</p>
+  <pre><code class="language-cpp">vector&lt;int&gt; nums = {1, 2, 3, 4, 5};
+for (int n : nums) {
+    cout &lt;&lt; n &lt;&lt; " ";
+}
+// Output: 1 2 3 4 5
+
+// Using reference to modify elements in place
+for (int &amp;n : nums) {
+    n *= 2;
+}
+// nums is now {2, 4, 6, 8, 10}
+
+// Using auto (type deduction, covered fully in Module 5.1)
+for (auto &amp;n : nums) {
+    cout &lt;&lt; n &lt;&lt; " ";
+}</code></pre>
+
+  <h3><code>while</code> Loop</h3>
+  <p>Best when the number of iterations is <strong>not known in advance</strong> — condition-driven repetition.</p>
+  <pre><code class="language-cpp">int i = 0;
+while (i &lt; 5) {
+    cout &lt;&lt; i &lt;&lt; " ";
+    i++;
+}
+// Output: 0 1 2 3 4</code></pre>
+  <p>The condition is checked <strong>before</strong> each iteration — if false initially, the loop body never executes even once.</p>
+  <pre><code class="language-cpp">int i = 10;
+while (i &lt; 5) {
+    cout &lt;&lt; "never runs";
+}
+// No output</code></pre>
+
+  <p>Common use case — reading input until a sentinel value:</p>
+  <pre><code class="language-cpp">int n;
+cin &gt;&gt; n;
+while (n != -1) {
+    cout &lt;&lt; "You entered: " &lt;&lt; n &lt;&lt; endl;
+    cin &gt;&gt; n;
+}</code></pre>
+
+  <h3><code>do-while</code> Loop</h3>
+  <p>Like <code>while</code>, but the condition is checked <strong>after</strong> the body executes — guarantees the body runs <strong>at least once</strong>.</p>
+  <pre><code class="language-cpp">int i = 10;
+do {
+    cout &lt;&lt; i &lt;&lt; " ";
+    i++;
+} while (i &lt; 5);
+// Output: 10  (runs once, even though condition is false from the start)</code></pre>
+
+  <p><strong>Classic use case</strong> — menu-driven programs where you want to show the menu at least once:</p>
+  <pre><code class="language-cpp">int choice;
+do {
+    cout &lt;&lt; "1. Add\n2. Delete\n3. Exit\nEnter choice: ";
+    cin &gt;&gt; choice;
+    // process choice
+} while (choice != 3);</code></pre>
+
+  <h3><code>for</code> vs <code>while</code> vs <code>do-while</code> — Summary</h3>
+  <table>
+    <thead>
+      <tr><th>Loop</th><th>Condition checked</th><th>Guaranteed execution</th><th>Best for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>for</code></td><td>Before each iteration</td><td>No (0 or more times)</td><td>Known iteration count</td></tr>
+      <tr><td><code>while</code></td><td>Before each iteration</td><td>No (0 or more times)</td><td>Unknown iteration count, condition-driven</td></tr>
+      <tr><td><code>do-while</code></td><td>After each iteration</td><td>Yes (at least once)</td><td>Menu loops, "run first, check later"</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. <code>break</code> and <code>continue</code></h2>
+
+  <h3><code>break</code></h3>
+  <p>Immediately exits the <strong>innermost</strong> enclosing loop or <code>switch</code> statement.</p>
+  <pre><code class="language-cpp">for (int i = 0; i &lt; 10; i++) {
+    if (i == 5) break;
+    cout &lt;&lt; i &lt;&lt; " ";
+}
+// Output: 0 1 2 3 4  (stops before printing 5)</code></pre>
+
+  <p><strong><code>break</code> only exits ONE level of nesting:</strong></p>
+  <pre><code class="language-cpp">for (int i = 0; i &lt; 3; i++) {
+    for (int j = 0; j &lt; 3; j++) {
+        if (j == 1) break; // only breaks the INNER loop
+        cout &lt;&lt; i &lt;&lt; "," &lt;&lt; j &lt;&lt; " ";
+    }
+}
+// Output: 0,0  1,0  2,0
+// The outer loop continues normally; only the inner loop stops early each time</code></pre>
+
+  <p>To break out of nested loops entirely, common approaches:</p>
+  <pre><code class="language-cpp">// Using a flag
+bool stop = false;
+for (int i = 0; i &lt; 3 &amp;&amp; !stop; i++) {
+    for (int j = 0; j &lt; 3; j++) {
+        if (i == 1 &amp;&amp; j == 1) { stop = true; break; }
+        cout &lt;&lt; i &lt;&lt; "," &lt;&lt; j &lt;&lt; " ";
+    }
+}
+
+// Using goto (rare, but valid — sometimes cleanest for deeply nested breaks)
+for (int i = 0; i &lt; 3; i++) {
+    for (int j = 0; j &lt; 3; j++) {
+        if (i == 1 &amp;&amp; j == 1) goto done;
+        cout &lt;&lt; i &lt;&lt; "," &lt;&lt; j &lt;&lt; " ";
+    }
+}
+done:
+cout &lt;&lt; "Done";</code></pre>
+
+  <h3><code>continue</code></h3>
+  <p>Skips the <strong>rest of the current iteration</strong> and jumps to the next one (re-evaluates the condition, or runs the update step in a <code>for</code> loop).</p>
+  <pre><code class="language-cpp">for (int i = 0; i &lt; 5; i++) {
+    if (i == 2) continue;
+    cout &lt;&lt; i &lt;&lt; " ";
+}
+// Output: 0 1 3 4  (2 is skipped, loop continues)</code></pre>
+
+  <p><strong>Gotcha with <code>while</code> + <code>continue</code></strong> — make sure the update happens before <code>continue</code>, or you'll get an infinite loop:</p>
+  <pre><code class="language-cpp">int i = 0;
+while (i &lt; 5) {
+    if (i == 2) {
+        i++;      // MUST update before continue, or infinite loop!
+        continue;
+    }
+    cout &lt;&lt; i &lt;&lt; " ";
+    i++;
+}
+// Output: 0 1 3 4</code></pre>
+
+  <h3><code>break</code> vs <code>continue</code> — Summary</h3>
+  <table>
+    <thead>
+      <tr><th>Statement</th><th>Effect</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>break</code></td><td>Exits the loop/switch entirely</td></tr>
+      <tr><td><code>continue</code></td><td>Skips to the next iteration, loop keeps running</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Practice Questions</h2>
+
+  <h3>Conceptual</h3>
+  <ol>
+    <li>Explain the "dangling else" problem with an example, and show how to fix it.</li>
+    <li>Why can't you use a <code>string</code> or <code>double</code> as a <code>switch</code> expression in standard C++?</li>
+    <li>What is fall-through in a <code>switch</code> statement? Give an example where it's used intentionally and usefully.</li>
+    <li>Compare <code>while</code> and <code>do-while</code> — construct a real scenario where using the wrong one would introduce a bug.</li>
+    <li>Why does <code>break</code> inside a nested loop only exit the innermost loop? How would you exit multiple nested loops at once?</li>
+  </ol>
+
+  <h3>Predict the Output</h3>
+  <ol>
+    <li>
+      <pre><code class="language-cpp">int x = 3;
+switch (x) {
+    case 1: cout &lt;&lt; "A";
+    case 2: cout &lt;&lt; "B";
+    case 3: cout &lt;&lt; "C";
+    case 4: cout &lt;&lt; "D"; break;
+    case 5: cout &lt;&lt; "E";
+}</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">for (int i = 0; i &lt; 5; i++) {
+    if (i % 2 == 0) continue;
+    if (i == 3) break;
+    cout &lt;&lt; i &lt;&lt; " ";
+}</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">int i = 5;
+do {
+    cout &lt;&lt; i &lt;&lt; " ";
+    i--;
+} while (i &gt; 5);</code></pre>
+    </li>
+    <li>
+      <pre><code class="language-cpp">int a = 5, b = 10;
+if (a &gt; 0)
+    if (b &gt; 20)
+        cout &lt;&lt; "X";
+else
+    cout &lt;&lt; "Y";</code></pre>
+      (Trick question — trace which <code>if</code> the <code>else</code> actually binds to.)
+    </li>
+  </ol>
+
+  <h3>Coding</h3>
+  <ol>
+    <li>Write a program using a <code>switch</code> statement that takes a number 1–7 and prints the corresponding day of the week, with a <code>default</code> case for invalid input.</li>
+    <li>Write a program that prints all prime numbers between 1 and 100 using nested loops and <code>continue</code> to skip non-prime checks efficiently.</li>
+    <li>Write a menu-driven calculator using <code>do-while</code>: it should keep showing a menu (Add/Subtract/Multiply/Divide/Exit) until the user selects Exit, performing the chosen operation each time.</li>
+    <li>Write a program that finds and prints the <strong>first pair</strong> of numbers <code>(i, j)</code> from two nested loops (<code>i</code> from 1–10, <code>j</code> from 1–10) such that <code>i * j == 36</code>, then breaks out of <strong>both</strong> loops immediately upon finding it.</li>
+    <li>Write a program that reads integers from the user until <code>-1</code> is entered (sentinel value), and prints the sum of all <strong>positive even numbers</strong> entered (skip negatives and odd numbers using <code>continue</code>).</li>
+  </ol>
+</section>
+    </main>
+  </div>
+  <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+  <script src="../progress.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>
